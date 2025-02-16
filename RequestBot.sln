@@ -18,6 +18,13 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Games", "Games", "{FC28CC9A
 		TelegramBOT\Zigurat.Designer.cs = TelegramBOT\Zigurat.Designer.cs
 	EndProjectSection
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{A48B3079-3747-4863-A1D9-5A7457328C14}"
+	ProjectSection(SolutionItems) = preProject
+		TelegramBotService.cs = TelegramBotService.cs
+	EndProjectSection
+EndProject
+Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "Request", "Request\Request.vdproj", "{0D430894-2363-4D3B-BFF9-E5952C038FDE}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -28,6 +35,8 @@ Global
 		{CE253BB9-3D52-4FD3-A319-80B8186AA86D}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{CE253BB9-3D52-4FD3-A319-80B8186AA86D}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{CE253BB9-3D52-4FD3-A319-80B8186AA86D}.Release|Any CPU.Build.0 = Release|Any CPU
+		{0D430894-2363-4D3B-BFF9-E5952C038FDE}.Debug|Any CPU.ActiveCfg = Debug
+		{0D430894-2363-4D3B-BFF9-E5952C038FDE}.Release|Any CPU.ActiveCfg = Release
 	EndGlobalSection
 	GlobalSection(SolutionProperties) = preSolution
 		HideSolutionNode = FALSE
