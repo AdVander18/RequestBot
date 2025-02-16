@@ -1,0 +1,38 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.11.35312.102
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Form", "TelegramBOT\Form.csproj", "{CE253BB9-3D52-4FD3-A319-80B8186AA86D}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "SolutionItems", "SolutionItems", "{61EA8381-6428-42CA-AC53-1F2B09A2D337}"
+	ProjectSection(SolutionItems) = preProject
+		TelegramBOT.cs = TelegramBOT.cs
+	EndProjectSection
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Games", "Games", "{FC28CC9A-502E-4F22-A46F-6E0B8FBD80F7}"
+	ProjectSection(SolutionItems) = preProject
+		TelegramBOT\GamePrinter.cs = TelegramBOT\GamePrinter.cs
+		TelegramBOT\GamePrinter.Designer.cs = TelegramBOT\GamePrinter.Designer.cs
+		TelegramBOT\Zigurat.cs = TelegramBOT\Zigurat.cs
+		TelegramBOT\Zigurat.Designer.cs = TelegramBOT\Zigurat.Designer.cs
+	EndProjectSection
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{CE253BB9-3D52-4FD3-A319-80B8186AA86D}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{CE253BB9-3D52-4FD3-A319-80B8186AA86D}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{CE253BB9-3D52-4FD3-A319-80B8186AA86D}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{CE253BB9-3D52-4FD3-A319-80B8186AA86D}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {F82A78EC-9C19-4777-869D-692FB1BF5ED9}
+	EndGlobalSection
+EndGlobal
