@@ -19,94 +19,46 @@ namespace TelegramBOT
         public EditCabinetForm(Cabinet cabinet, Database database)
         {
             InitializeComponent();
+            this.FormBorderStyle = FormBorderStyle.FixedToolWindow;
+            this.StartPosition = FormStartPosition.CenterScreen;
             _database = database;
             Cabinet = cabinet;
-            InitializeForm();
-        }
-
-        private void InitializeForm()
-        {
-            this.Size = new Size(400, 300);
-            this.Text = "Редактирование кабинета";
-
-            // Номер кабинета
-            var lblNumber = new Label
-            {
-                Text = "Номер кабинета:",
-                Location = new Point(20, 20),
-                Width = 120
-            };
-            var txtNumber = new TextBox
-            {
-                Text = Cabinet.Number,
-                Location = new Point(150, 20),
-                Width = 200
-            };
-
-            // Описание
-            var lblDesc = new Label
-            {
-                Text = "Описание:",
-                Location = new Point(20, 60),
-                Width = 120
-            };
-            var txtDesc = new TextBox
-            {
-                Text = Cabinet.Description,
-                Location = new Point(150, 60),
-                Width = 200,
-                Height = 100
-            };
-
-            // Кнопки
-            var btnSave = new Button
-            {
-                Text = "Сохранить",
-                DialogResult = DialogResult.OK,
-                Location = new Point(100, 180)
-            };
-
-            var btnCancel = new Button
-            {
-                Text = "Отмена",
-                DialogResult = DialogResult.Cancel,
-                Location = new Point(200, 180)
-            };
-
-            // Валидация
-            btnSave.Click += (s, e) =>
-            {
-                if (string.IsNullOrWhiteSpace(txtNumber.Text))
-                {
-                    MessageBox.Show("Укажите номер кабинета!");
-                    return;
-                }
-
-                // Проверка уникальности номера
-                if (_database.CheckCabinetExists(txtNumber.Text) &&
-                    txtNumber.Text != Cabinet.Number)
-                {
-                    MessageBox.Show("Кабинет с таким номером уже существует!");
-                    return;
-                }
-
-                Cabinet.Number = txtNumber.Text.Trim();
-                Cabinet.Description = txtDesc.Text.Trim();
-                this.DialogResult = DialogResult.OK;
-                this.Close();
-            };
-
-            this.Controls.AddRange(new Control[]
-            {
-            lblNumber, txtNumber,
-            lblDesc, txtDesc,
-            btnSave, btnCancel
-            });
         }
 
         private void EditCabinetForm_Load(object sender, EventArgs e)
         {
 
+        }
+
+        private void btnSave_Click(object sender, EventArgs e)
+        {
+            // Проверка на пустое поле
+            if (string.IsNullOrWhiteSpace(txtNumber.Text))
+            {
+                MessageBox.Show("Укажите номер кабинета!");
+                return;
+            }
+
+            // Проверка, что номер — целое число
+            if (!int.TryParse(txtNumber.Text, out int number))
+            {
+                MessageBox.Show("Номер кабинета должен быть числом!");
+                return;
+            }
+
+            // Проверка уникальности (если номер изменился)
+            if (_database.CheckCabinetExists(txtNumber.Text) &&
+                txtNumber.Text != Cabinet.Number)
+            {
+                MessageBox.Show("Кабинет с таким номером уже существует!");
+                return;
+            }
+
+            // Сохранение данных
+            Cabinet.Number = txtNumber.Text.Trim();
+            Cabinet.Description = txtDesc.Text.Trim();
+            this.DialogResult = DialogResult.OK;
+            this.Close();
         }
     }
 }

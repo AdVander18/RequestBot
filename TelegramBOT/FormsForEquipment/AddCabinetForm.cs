@@ -1,11 +1,4 @@
 ﻿using System;
-using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using static TelegramBOT.Database;
 
@@ -43,11 +36,18 @@ namespace TelegramBOT
 
         private void btnOK_Click(object sender, EventArgs e)
         {
-            if (ValidateChildren())
+            if(int.TryParse(txtNumber.Text, out int number))
             {
-                Cabinet.Number = txtNumber.Text.Trim();
-                Cabinet.Description = txtDescription.Text.Trim();
-                DialogResult = DialogResult.OK;
+                if (ValidateChildren())
+                {
+                    Cabinet.Number = txtNumber.Text.Trim();
+                    Cabinet.Description = txtDescription.Text.Trim();
+                    DialogResult = DialogResult.OK;
+                }
+            }
+            else
+            {
+                MessageBox.Show("Было введено не число.");
             }
         }
     }

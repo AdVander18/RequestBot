@@ -28,53 +28,87 @@
         /// </summary>
         private void InitializeComponent()
         {
-            this.btnOk = new System.Windows.Forms.Button();
-            this.txtType = new System.Windows.Forms.TextBox();
-            this.txtOS = new System.Windows.Forms.TextBox();
+            this.cmbType = new System.Windows.Forms.ComboBox();
             this.txtModel = new System.Windows.Forms.TextBox();
+            this.txtOS = new System.Windows.Forms.TextBox();
+            this.btnSave = new System.Windows.Forms.Button();
+            this.label1 = new System.Windows.Forms.Label();
+            this.label2 = new System.Windows.Forms.Label();
+            this.label3 = new System.Windows.Forms.Label();
             this.SuspendLayout();
             // 
-            // btnOk
+            // cmbType
             // 
-            this.btnOk.Location = new System.Drawing.Point(69, 201);
-            this.btnOk.Name = "btnOk";
-            this.btnOk.Size = new System.Drawing.Size(75, 23);
-            this.btnOk.TabIndex = 0;
-            this.btnOk.Text = "button1";
-            this.btnOk.UseVisualStyleBackColor = true;
-            this.btnOk.Click += new System.EventHandler(this.btnOK_Click);
+            this.cmbType.FormattingEnabled = true;
+            this.cmbType.Location = new System.Drawing.Point(186, 76);
+            this.cmbType.Name = "cmbType";
+            this.cmbType.Size = new System.Drawing.Size(121, 21);
+            this.cmbType.TabIndex = 0;
             // 
-            // txtType
+            // txtModel
             // 
-            this.txtType.Location = new System.Drawing.Point(105, 50);
-            this.txtType.Name = "txtType";
-            this.txtType.Size = new System.Drawing.Size(100, 20);
-            this.txtType.TabIndex = 1;
+            this.txtModel.Location = new System.Drawing.Point(196, 103);
+            this.txtModel.Name = "txtModel";
+            this.txtModel.Size = new System.Drawing.Size(100, 20);
+            this.txtModel.TabIndex = 1;
             // 
             // txtOS
             // 
-            this.txtOS.Location = new System.Drawing.Point(105, 102);
+            this.txtOS.Location = new System.Drawing.Point(196, 130);
             this.txtOS.Name = "txtOS";
             this.txtOS.Size = new System.Drawing.Size(100, 20);
             this.txtOS.TabIndex = 2;
             // 
-            // txtModel
+            // btnSave
             // 
-            this.txtModel.Location = new System.Drawing.Point(105, 76);
-            this.txtModel.Name = "txtModel";
-            this.txtModel.Size = new System.Drawing.Size(100, 20);
-            this.txtModel.TabIndex = 3;
+            this.btnSave.Location = new System.Drawing.Point(144, 170);
+            this.btnSave.Name = "btnSave";
+            this.btnSave.Size = new System.Drawing.Size(75, 23);
+            this.btnSave.TabIndex = 3;
+            this.btnSave.Text = "Сохранить";
+            this.btnSave.UseVisualStyleBackColor = true;
+            this.btnSave.Click += new System.EventHandler(this.btnSave_Click);
             // 
-            // AddEditEquipment
+            // label1
+            // 
+            this.label1.AutoSize = true;
+            this.label1.Location = new System.Drawing.Point(77, 79);
+            this.label1.Name = "label1";
+            this.label1.Size = new System.Drawing.Size(103, 13);
+            this.label1.TabIndex = 4;
+            this.label1.Text = "Тип оборудования:";
+            // 
+            // label2
+            // 
+            this.label2.AutoSize = true;
+            this.label2.Location = new System.Drawing.Point(141, 106);
+            this.label2.Name = "label2";
+            this.label2.Size = new System.Drawing.Size(49, 13);
+            this.label2.TabIndex = 5;
+            this.label2.Text = "Модель:";
+            // 
+            // label3
+            // 
+            this.label3.AutoSize = true;
+            this.label3.Location = new System.Drawing.Point(60, 133);
+            this.label3.Name = "label3";
+            this.label3.Size = new System.Drawing.Size(130, 13);
+            this.label3.TabIndex = 6;
+            this.label3.Text = "Операционная система:";
+            // 
+            // AddEditEquipmentForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
-            this.ClientSize = new System.Drawing.Size(800, 450);
-            this.Controls.Add(this.txtModel);
+            this.ClientSize = new System.Drawing.Size(384, 261);
+            this.Controls.Add(this.label3);
+            this.Controls.Add(this.label2);
+            this.Controls.Add(this.label1);
+            this.Controls.Add(this.btnSave);
             this.Controls.Add(this.txtOS);
-            this.Controls.Add(this.txtType);
-            this.Controls.Add(this.btnOk);
-            this.Name = "AddEditEquipment";
+            this.Controls.Add(this.txtModel);
+            this.Controls.Add(this.cmbType);
+            this.Name = "AddEditEquipmentForm";
             this.Text = "AddEditEquipment";
             this.ResumeLayout(false);
             this.PerformLayout();
@@ -83,9 +117,12 @@
 
         #endregion
 
-        private System.Windows.Forms.Button btnOk;
-        private System.Windows.Forms.TextBox txtType;
-        private System.Windows.Forms.TextBox txtOS;
+        private System.Windows.Forms.ComboBox cmbType;
         private System.Windows.Forms.TextBox txtModel;
+        private System.Windows.Forms.TextBox txtOS;
+        private System.Windows.Forms.Button btnSave;
+        private System.Windows.Forms.Label label1;
+        private System.Windows.Forms.Label label2;
+        private System.Windows.Forms.Label label3;
     }
 }

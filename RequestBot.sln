@@ -18,11 +18,6 @@ Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Games", "Games", "{FC28CC9A
 		TelegramBOT\Zigurat.Designer.cs = TelegramBOT\Zigurat.Designer.cs
 	EndProjectSection
 EndProject
-Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "Solution Items", "Solution Items", "{A48B3079-3747-4863-A1D9-5A7457328C14}"
-	ProjectSection(SolutionItems) = preProject
-		TelegramBotService.cs = TelegramBotService.cs
-	EndProjectSection
-EndProject
 Project("{54435603-DBB4-11D2-8724-00A0C9A8B90C}") = "Request", "Request\Request.vdproj", "{0D430894-2363-4D3B-BFF9-E5952C038FDE}"
 EndProject
 Global

@@ -87,6 +87,7 @@
             this.treeView.Size = new System.Drawing.Size(784, 521);
             this.treeView.TabIndex = 1;
             this.treeView.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.treeView_AfterSelect);
+            this.treeView.DoubleClick += new System.EventHandler(this.treeView_DoubleClick);
             // 
             // EquipmentForm
             // 

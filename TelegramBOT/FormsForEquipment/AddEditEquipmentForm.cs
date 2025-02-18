@@ -1,11 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using static TelegramBOT.Database;
 
@@ -13,37 +7,61 @@ namespace TelegramBOT.FormsForEquipment
 {
     public partial class AddEditEquipmentForm : Form
     {
+        private readonly Database _database;
+
         public string Type { get; private set; }
         public string Model { get; private set; }
         public string OS { get; private set; }
-        // Конструктор ДЛЯ ДОБАВЛЕНИЯ нового оборудования
-        public AddEditEquipmentForm()
+
+        public AddEditEquipmentForm(Database db, Equipment existingEquipment = null)
         {
             InitializeComponent();
-        }
+            this.FormBorderStyle = FormBorderStyle.FixedToolWindow;
+            this.StartPosition = FormStartPosition.CenterScreen;
+            _database = db;
 
-        // Конструктор ДЛЯ РЕДАКТИРОВАНИЯ существующего оборудования
-        public AddEditEquipmentForm(Equipment equipment) : this()
-        {
-            // Заполняем поля данными из equipment
-            txtType.Text = equipment.Type;
-            txtModel.Text = equipment.Model;
-            txtOS.Text = equipment.OS;
-        }
+            // Настройка автодополнения
+            cmbType.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
+            cmbType.AutoCompleteSource = AutoCompleteSource.ListItems;
 
+            // Загрузка типов оборудования
+            LoadEquipmentTypes();
 
-        private void btnOK_Click(object sender, EventArgs e)
-        {
-            if (string.IsNullOrWhiteSpace(txtType.Text) || string.IsNullOrWhiteSpace(txtModel.Text))
+            // Заполнение данных при редактировании
+            if (existingEquipment != null)
             {
-                MessageBox.Show("Поля 'Тип' и 'Модель' обязательны для заполнения!",
-                                "Ошибка",
-                                MessageBoxButtons.OK,
-                                MessageBoxIcon.Warning);
+                cmbType.SelectedItem = existingEquipment.Type;
+                txtModel.Text = existingEquipment.Model;
+                txtOS.Text = existingEquipment.OS;
+            }
+        }
+
+        private void LoadEquipmentTypes()
+        {
+            var types = _database.GetEquipmentTypes();
+
+            if (types.Count == 0)
+            {
+                types.AddRange(new[] { "Компьютер", "Принтер", "Монитор" });
+            }
+
+            cmbType.Items.AddRange(types.ToArray());
+        }
+
+        private void btnSave_Click(object sender, EventArgs e)
+        {
+            if (cmbType.SelectedItem == null || string.IsNullOrWhiteSpace(txtModel.Text))
+            {
+                MessageBox.Show("Заполните обязательные поля (Тип и Модель)!");
                 return;
             }
 
+            Type = cmbType.SelectedItem.ToString();
+            Model = txtModel.Text.Trim();
+            OS = txtOS.Text.Trim();
+
             DialogResult = DialogResult.OK;
+            Close();
         }
     }
 }

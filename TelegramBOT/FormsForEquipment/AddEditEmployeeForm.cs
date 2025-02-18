@@ -1,11 +1,5 @@
 ﻿using System;
 using System.Collections.Generic;
-using System.ComponentModel;
-using System.Data;
-using System.Drawing;
-using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows.Forms;
 using static TelegramBOT.Database;
 
@@ -13,32 +7,54 @@ namespace TelegramBOT.FormsForEquipment
 {
     public partial class AddEditEmployeeForm : Form
     {
+        private readonly Database _database;
+        
         public string FirstName { get; private set; }
         public string LastName { get; private set; }
         public string Position { get; private set; }
         public string Username { get; private set; }
 
-        public AddEditEmployeeForm(List<string> existingUsernames)
+        public AddEditEmployeeForm(Database db, Employee existingEmployee = null)
         {
             InitializeComponent();
-            comboUsername.Items.AddRange(existingUsernames.ToArray());
+            this.FormBorderStyle = FormBorderStyle.FixedToolWindow;
+            this.StartPosition = FormStartPosition.CenterScreen;
+            _database = db;
+
+            // Настройка автодополнения
+            cmbUsername.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
+            cmbUsername.AutoCompleteSource = AutoCompleteSource.ListItems;
+
+            // Загрузка пользователей
+            var usernames = _database.GetAllUsernames();
+            cmbUsername.Items.AddRange(usernames.ToArray());
+
+            // Заполнение данных при редактировании
+            if (existingEmployee != null)
+            {
+                txtFirstName.Text = existingEmployee.FirstName;
+                txtLastName.Text = existingEmployee.LastName;
+                txtPosition.Text = existingEmployee.Position;
+                cmbUsername.SelectedItem = existingEmployee.Username;
+            }
         }
 
-        public AddEditEmployeeForm(Employee employee, List<string> existingUsernames) : this(existingUsernames)
+        private void btnSave_Click(object sender, EventArgs e)
         {
-            txtFirstName.Text = employee.FirstName;
-            txtLastName.Text = employee.LastName;
-            txtPosition.Text = employee.Position;
-            comboUsername.Text = employee.Username;
-        }
+            if (string.IsNullOrWhiteSpace(txtFirstName.Text) || 
+                string.IsNullOrWhiteSpace(txtLastName.Text))
+            {
+                MessageBox.Show("Заполните имя и фамилию!");
+                return;
+            }
 
-        private void btnOK_Click(object sender, EventArgs e)
-        {
-            FirstName = txtFirstName.Text;
-            LastName = txtLastName.Text;
-            Position = txtPosition.Text;
-            Username = comboUsername.Text;
+            FirstName = txtFirstName.Text.Trim();
+            LastName = txtLastName.Text.Trim();
+            Position = txtPosition.Text.Trim();
+            Username = cmbUsername.SelectedItem?.ToString();
+
             DialogResult = DialogResult.OK;
+            Close();
         }
     }
 }
