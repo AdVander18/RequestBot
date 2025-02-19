@@ -587,6 +587,49 @@ namespace TelegramBOT
             }
         }
 
+        public void DeleteCabinet(int id)
+        {
+            using (var connection = new SQLiteConnection(_connectionString))
+            {
+                connection.Open();
+                using (var transaction = connection.BeginTransaction())
+                {
+                    try
+                    {
+                        // Удаляем оборудование кабинета
+                        var cmdEquipment = new SQLiteCommand(
+                            "DELETE FROM Equipment WHERE CabinetId = @id",
+                            connection);
+                        cmdEquipment.Parameters.AddWithValue("@id", id);
+                        cmdEquipment.ExecuteNonQuery();
+
+                        // Удаляем сотрудников кабинета
+                        var cmdEmployees = new SQLiteCommand(
+                            "DELETE FROM Employees WHERE CabinetId = @id",
+                            connection);
+                        cmdEmployees.Parameters.AddWithValue("@id", id);
+                        cmdEmployees.ExecuteNonQuery();
+
+                        // Удаляем сам кабинет
+                        var cmdCabinet = new SQLiteCommand(
+                            "DELETE FROM Cabinets WHERE Id = @id",
+                            connection);
+                        cmdCabinet.Parameters.AddWithValue("@id", id);
+                        cmdCabinet.ExecuteNonQuery();
+
+                        transaction.Commit();
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
+                }
+            }
+        }
+
+
+
         public List<string> GetAllUsernames()
         {
             var usernames = new List<string>();

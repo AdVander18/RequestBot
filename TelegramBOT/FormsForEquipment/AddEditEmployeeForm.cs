@@ -18,7 +18,7 @@ namespace TelegramBOT.FormsForEquipment
         {
             InitializeComponent();
             this.FormBorderStyle = FormBorderStyle.FixedToolWindow;
-            this.StartPosition = FormStartPosition.CenterScreen;
+            this.StartPosition = FormStartPosition.CenterParent;
             _database = db;
 
             // Настройка автодополнения

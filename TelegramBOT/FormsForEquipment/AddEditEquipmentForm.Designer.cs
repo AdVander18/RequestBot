@@ -109,7 +109,7 @@
             this.Controls.Add(this.txtModel);
             this.Controls.Add(this.cmbType);
             this.Name = "AddEditEquipmentForm";
-            this.Text = "AddEditEquipment";
+            this.Text = "Изменение/добавление оборудования";
             this.ResumeLayout(false);
             this.PerformLayout();
 

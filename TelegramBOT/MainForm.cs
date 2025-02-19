@@ -285,12 +285,10 @@
 
         private void btnEquipment_Click(object sender, EventArgs e)
         {
-            // Кнопка для перехода на форму склада предприятия, какое оборудование стоит в каком кабинете, кто работает
             var equipmentForm = new EquipmentForm(_database);
+            equipmentForm.Owner = this; // Явно указываем владельца
             equipmentForm.Show();
+            this.Activate(); // Возвращаем фокус на MainForm
         }
     }
-
-
-    
-    }
+}

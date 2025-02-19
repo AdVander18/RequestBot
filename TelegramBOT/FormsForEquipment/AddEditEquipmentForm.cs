@@ -1,5 +1,6 @@
 ﻿using System;
 using System.Collections.Generic;
+using System.Linq;
 using System.Windows.Forms;
 using static TelegramBOT.Database;
 
@@ -17,12 +18,15 @@ namespace TelegramBOT.FormsForEquipment
         {
             InitializeComponent();
             this.FormBorderStyle = FormBorderStyle.FixedToolWindow;
-            this.StartPosition = FormStartPosition.CenterScreen;
+            this.StartPosition = FormStartPosition.CenterParent;
             _database = db;
 
             // Настройка автодополнения
             cmbType.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
             cmbType.AutoCompleteSource = AutoCompleteSource.ListItems;
+
+            // Подписываемся на событие изменения выбранного типа
+            cmbType.SelectedIndexChanged += cmbType_SelectedIndexChanged;
 
             // Загрузка типов оборудования
             LoadEquipmentTypes();
@@ -34,18 +38,48 @@ namespace TelegramBOT.FormsForEquipment
                 txtModel.Text = existingEquipment.Model;
                 txtOS.Text = existingEquipment.OS;
             }
+
+            // Обновляем состояние поля OS при старте формы
+            UpdateOSFieldState();
+        }
+
+        // Обработчик изменения выбранного типа
+        private void cmbType_SelectedIndexChanged(object sender, EventArgs e)
+        {
+            UpdateOSFieldState();
+        }
+
+        // Метод для обновления состояния поля OS
+        private void UpdateOSFieldState()
+        {
+            bool isComputer = cmbType.SelectedItem?.ToString() == "Компьютер";
+            txtOS.Enabled = isComputer;
+
+            // Очищаем поле, если выбран не компьютер
+            if (!isComputer)
+            {
+                txtOS.Text = string.Empty;
+            }
         }
 
         private void LoadEquipmentTypes()
         {
+            // Получаем типы из базы данных
             var types = _database.GetEquipmentTypes();
 
-            if (types.Count == 0)
+            // Создаем список стандартных типов
+            var defaultTypes = new List<string> { "Компьютер", "Принтер", "Монитор" };
+
+            // Объединяем стандартные типы с полученными из базы, избегая дубликатов
+            var allTypes = new HashSet<string>(types); // Используем HashSet для удобства проверки наличия
+            foreach (var type in defaultTypes)
             {
-                types.AddRange(new[] { "Компьютер", "Принтер", "Монитор" });
+                allTypes.Add(type); // Добавляем стандартные, если их ещё нет
             }
 
-            cmbType.Items.AddRange(types.ToArray());
+            // Очищаем ComboBox и заполняем объединенным списком
+            cmbType.Items.Clear();
+            cmbType.Items.AddRange(allTypes.ToArray());
         }
 
         private void btnSave_Click(object sender, EventArgs e)

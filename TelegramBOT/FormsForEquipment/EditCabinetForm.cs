@@ -20,7 +20,7 @@ namespace TelegramBOT
         {
             InitializeComponent();
             this.FormBorderStyle = FormBorderStyle.FixedToolWindow;
-            this.StartPosition = FormStartPosition.CenterScreen;
+            this.StartPosition = FormStartPosition.CenterParent;
             _database = database;
             Cabinet = cabinet;
         }

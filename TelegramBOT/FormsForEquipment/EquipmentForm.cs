@@ -55,19 +55,31 @@ namespace TelegramBOT
             var deleteToolStripItem = new ToolStripMenuItem("Удалить");
             deleteToolStripItem.Click += DeleteItem_Click;
             contextMenu.Items.Add(deleteToolStripItem);
+            treeView.ContextMenuStrip = contextMenu; // Привязка меню к TreeView
 
-            // 5. Теперь treeView уже инициализирован
-            treeView.ContextMenuStrip = contextMenu;
+            // 5. Настраиваем TreeView
+
+            treeView.MouseDown += treeView_MouseDown; // Добавьте эту строку
 
             // 6. Загрузка данных
+            this.FormClosing += EquipmentForm_FormClosing;
             LoadData();
+        }
+
+        private void EquipmentForm_FormClosing(object sender, FormClosingEventArgs e)
+        {
+            // Передаем фокус обратно на MainForm
+            if (this.Owner != null)
+            {
+                this.Owner.Activate();
+                this.Owner.Focus();
+            }
         }
 
         private void LoadData()
         {
-            // Сохраняем текущее состояние
             TreeNode selectedNode = treeView.SelectedNode;
-            // ОШИБКА ПРОИСХОДИТ ПОСЛЕ РАСКРЫТИЯ "ОБОРУДОВАНИЯ" И ОБНОВЛЕНИЯ ДАННЫХ ПО КНОПКУ ИСПРАВИТЬ int[] selectedPath = selectedNode?.FullPath.Split('\\').Select(x => int.Parse(x)).ToArray();
+            int[] selectedPath = selectedNode != null ? GetNodePath(selectedNode) : null;
             List<string> expandedPaths = GetAllExpandedNodePaths();
 
             treeView.BeginUpdate();
@@ -76,7 +88,12 @@ namespace TelegramBOT
             var cabinets = _database.GetAllCabinets();
             foreach (var cabinet in cabinets)
             {
-                var node = new TreeNode($"Кабинет {cabinet.Number}")
+                // Формируем текст узла с учетом описания
+                string cabinetText = string.IsNullOrEmpty(cabinet.Description)
+                    ? $"Кабинет {cabinet.Number}"
+                    : $"Кабинет {cabinet.Number} ({cabinet.Description})";
+
+                var node = new TreeNode(cabinetText)
                 {
                     Tag = cabinet,
                     ImageKey = "cabinet"
@@ -101,10 +118,46 @@ namespace TelegramBOT
 
             treeView.EndUpdate();
 
-            // Восстанавливаем состояние
             RestoreExpandedNodes(expandedPaths);
             RestoreSelectedNode(selectedPath);
         }
+
+        private int[] GetNodePath(TreeNode node)
+        {
+            List<int> path = new List<int>();
+            while (node != null)
+            {
+                if (node.Parent != null)
+                {
+                    int index = node.Parent.Nodes.IndexOf(node);
+                    path.Insert(0, index); // Добавляем индекс в начало списка
+                }
+                node = node.Parent;
+            }
+            return path.ToArray();
+        }
+
+        // Обновленный метод восстановления узла
+        private void RestoreSelectedNode(int[] path)
+        {
+            if (path == null || path.Length == 0) return;
+
+            TreeNode currentNode = treeView.Nodes[path[0]];
+            for (int i = 1; i < path.Length; i++)
+            {
+                if (currentNode.Nodes.Count > path[i])
+                {
+                    currentNode = currentNode.Nodes[path[i]];
+                }
+                else
+                {
+                    return; // Если структура изменилась - выходим
+                }
+            }
+            treeView.SelectedNode = currentNode;
+            currentNode.EnsureVisible();
+        }
+
         private List<string> GetAllExpandedNodePaths()
         {
             var paths = new List<string>();
@@ -139,19 +192,6 @@ namespace TelegramBOT
             }
         }
 
-        private void RestoreSelectedNode(int[] path)
-        {
-            if (path == null || path.Length == 0) return;
-
-            TreeNode currentNode = treeView.Nodes[path[0] - 1];
-            for (int i = 1; i < path.Length; i++)
-            {
-                currentNode = currentNode.Nodes[path[i] - 1];
-            }
-            treeView.SelectedNode = currentNode;
-            currentNode.EnsureVisible();
-        }
-
         private TreeNode FindNodeByPath(string fullPath)
         {
             string[] parts = fullPath.Split('\\');
@@ -169,19 +209,85 @@ namespace TelegramBOT
 
         private void DeleteItem_Click(object sender, EventArgs e)
         {
-            if (treeView.SelectedNode?.Tag is Equipment equipment)
+            var selectedNode = treeView.SelectedNode;
+            if (selectedNode == null) return;
+
+            string message = "";
+            string title = "Подтверждение удаления";
+            DialogResult result;
+
+            // Звуковое предупреждение (опционально)
+            System.Media.SystemSounds.Exclamation.Play();                                                                                                                                                               
+
+            if (selectedNode.Tag is Equipment equipment)
             {
-                _database.DeleteEquipment(equipment.Id);
-                LoadData();
+                message = $"Удалить оборудование: {equipment.Type} {equipment.Model}?";
+                result = MessageBox.Show(
+                    text: message,
+                    caption: title,
+                    buttons: MessageBoxButtons.YesNo,
+                    icon: MessageBoxIcon.Warning,
+                    defaultButton: MessageBoxDefaultButton.Button2);
+
+                if (result == DialogResult.Yes)
+                {
+                    _database.DeleteEquipment(equipment.Id);
+                    LoadData();
+                }
             }
-            else if (treeView.SelectedNode?.Tag is Employee employee)
+            else if (selectedNode.Tag is Employee employee)
             {
-                _database.DeleteEmployee(employee.Id);
-                LoadData();
+                message = $"Удалить сотрудника: {employee.LastName} {employee.FirstName}?";
+                result = MessageBox.Show(
+                    text: message,
+                    caption: title,
+                    buttons: MessageBoxButtons.YesNo,
+                    icon: MessageBoxIcon.Warning);
+
+                if (result == DialogResult.Yes)
+                {
+                    _database.DeleteEmployee(employee.Id);
+                    LoadData();
+                }
+            }
+            else if (selectedNode.Tag is Cabinet cabinet)
+            {
+                bool hasData = cabinet.Equipment.Any() || cabinet.Employees.Any();
+                message = $"Удалить кабинет {cabinet.Number}?";
+
+                if (hasData)
+                {
+                    message += "\n\nБудут удалены:";
+                    if (cabinet.Equipment.Any()) message += "\n- Все оборудование";
+                    if (cabinet.Employees.Any()) message += "\n- Все сотрудники";
+                }
+
+                result = MessageBox.Show(
+                    text: message,
+                    caption: title,
+                    buttons: MessageBoxButtons.YesNo,
+                    icon: MessageBoxIcon.Warning,
+                    defaultButton: MessageBoxDefaultButton.Button2);
+
+                if (result == DialogResult.Yes)
+                {
+                    _database.DeleteCabinet(cabinet.Id);
+                    LoadData();
+                }
             }
         }
 
-
+        private void treeView_MouseDown(object sender, MouseEventArgs e)
+        {
+            if (e.Button == MouseButtons.Right)
+            {
+                TreeNode node = treeView.GetNodeAt(e.X, e.Y);
+                if (node != null)
+                {
+                    treeView.SelectedNode = node;
+                }
+            }
+        }
 
         private void AddNewCabinet()
         {
@@ -244,15 +350,20 @@ namespace TelegramBOT
         {
             if (treeView.SelectedNode?.Tag is Equipment equipment)
             {
-                // Исправлено: передаем _database и equipment
-                var form = new AddEditEquipmentForm(_database, equipment);
-                if (form.ShowDialog() == DialogResult.OK)
+                var form = new AddEditEquipmentForm(_database, equipment)
+                {
+                    StartPosition = FormStartPosition.CenterParent // Центрирование относительно родителя
+                };
+
+                if (form.ShowDialog(this) == DialogResult.OK) // Передаём текущую форму как владельца
                 {
                     equipment.Type = form.Type;
                     equipment.Model = form.Model;
                     equipment.OS = form.OS;
                     _database.UpdateEquipment(equipment);
                     LoadData();
+
+                    this.Activate(); // Возвращаем фокус после закрытия диалога
                 }
             }
         }
@@ -261,9 +372,12 @@ namespace TelegramBOT
         {
             if (treeView.SelectedNode?.Tag is Cabinet cabinet)
             {
-                // Исправлено: передаем только _database
-                var form = new AddEditEmployeeForm(_database);
-                if (form.ShowDialog() == DialogResult.OK)
+                var form = new AddEditEmployeeForm(_database)
+                {
+                    StartPosition = FormStartPosition.CenterParent // Центрирование относительно родителя
+                };
+
+                if (form.ShowDialog(this) == DialogResult.OK) // Передаём текущую форму как владельца
                 {
                     var employee = new Employee
                     {
@@ -275,6 +389,8 @@ namespace TelegramBOT
                     };
                     _database.AddEmployee(employee);
                     LoadData();
+
+                    this.Activate(); // Возвращаем фокус после закрытия диалога
                 }
             }
         }
@@ -283,9 +399,12 @@ namespace TelegramBOT
         {
             if (treeView.SelectedNode?.Tag is Employee employee)
             {
-                // Исправлено: передаем _database и employee
-                var form = new AddEditEmployeeForm(_database, employee);
-                if (form.ShowDialog() == DialogResult.OK)
+                var form = new AddEditEmployeeForm(_database, employee)
+                {
+                    StartPosition = FormStartPosition.CenterParent // Центрирование относительно родителя
+                };
+
+                if (form.ShowDialog(this) == DialogResult.OK) // Передаём текущую форму как владельца
                 {
                     employee.FirstName = form.FirstName;
                     employee.LastName = form.LastName;
@@ -293,6 +412,8 @@ namespace TelegramBOT
                     employee.Username = form.Username;
                     _database.UpdateEmployee(employee);
                     LoadData();
+
+                    this.Activate(); // Возвращаем фокус после закрытия диалога
                 }
             }
         }
@@ -332,6 +453,8 @@ namespace TelegramBOT
         {
             LoadData();
         }
+
+        
 
         private void treeView_AfterSelect(object sender, TreeViewEventArgs e)
         {
