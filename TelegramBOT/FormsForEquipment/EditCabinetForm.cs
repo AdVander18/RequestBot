@@ -27,7 +27,7 @@ namespace TelegramBOT
 
         private void EditCabinetForm_Load(object sender, EventArgs e)
         {
-
+            // Заполнение полей данными
         }
 
         private void btnSave_Click(object sender, EventArgs e)
