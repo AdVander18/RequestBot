@@ -71,7 +71,6 @@ namespace PrinterRepairMaster
         private NumericUpDown gear1;
         private NumericUpDown gear2;
         private NumericUpDown gear3;
-        private Button btnCheckGears;
         private Button btnHold;
 
         // Игровые переменные

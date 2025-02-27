@@ -8,94 +8,147 @@ namespace TelegramBOT.FormsForEquipment
 {
     public partial class AddEditEquipmentForm : Form
     {
-        private readonly Database _database;
+        public int? ResponsibleEmployeeId { get; private set; }
 
+        private readonly Database _database;
+        private readonly int _cabinetId;
+        private readonly Equipment _existingEquipment;
+
+        public int CabinetId { get; private set; }
         public string Type { get; private set; }
         public string Model { get; private set; }
         public string OS { get; private set; }
 
-        public AddEditEquipmentForm(Database db, Equipment existingEquipment = null)
+        public AddEditEquipmentForm(Database db, int cabinetId, Equipment existingEquipment = null)
         {
             InitializeComponent();
+            CabinetId = cabinetId;
+            _database = db;
+            _cabinetId = cabinetId;
+            _existingEquipment = existingEquipment;
+
+            // Настройка интерфейса
             this.FormBorderStyle = FormBorderStyle.FixedToolWindow;
             this.StartPosition = FormStartPosition.CenterParent;
-            _database = db;
-
-            // Настройка автодополнения
             cmbType.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
             cmbType.AutoCompleteSource = AutoCompleteSource.ListItems;
-
-            // Подписываемся на событие изменения выбранного типа
             cmbType.SelectedIndexChanged += cmbType_SelectedIndexChanged;
 
-            // Загрузка типов оборудования
+            // Загрузка данных
             LoadEquipmentTypes();
-
-            // Заполнение данных при редактировании
-            if (existingEquipment != null)
-            {
-                cmbType.SelectedItem = existingEquipment.Type;
-                txtModel.Text = existingEquipment.Model;
-                txtOS.Text = existingEquipment.OS;
-            }
-
-            // Обновляем состояние поля OS при старте формы
+            InitializeResponsibleComboBox(_cabinetId);
+            LoadExistingData();
             UpdateOSFieldState();
         }
 
-        // Обработчик изменения выбранного типа
+        private void LoadExistingData()
+        {
+            if (_existingEquipment != null)
+            {
+                cmbType.SelectedItem = _existingEquipment.Type;
+                txtModel.Text = _existingEquipment.Model;
+                txtOS.Text = _existingEquipment.OS;
+
+                // Устанавливаем ответственного сотрудника
+                if (_existingEquipment.ResponsibleEmployeeId.HasValue)
+                {
+                    cmbMRP.SelectedValue = _existingEquipment.ResponsibleEmployeeId.Value;
+                }
+            }
+        }
+
+        private void InitializeResponsibleComboBox(int cabinetId)
+        {
+            var employeesInCabinet = _database.GetAllEmployees()
+                .Where(e => e.CabinetId == cabinetId)
+                .ToList();
+
+            cmbMRP.DataSource = employeesInCabinet;
+            cmbMRP.DisplayMember = "FullName";
+            cmbMRP.ValueMember = "Id";
+
+            // Для отладки: проверьте, что список сотрудников не пуст
+            Console.WriteLine($"Загружено сотрудников: {employeesInCabinet.Count}");
+        }
+
         private void cmbType_SelectedIndexChanged(object sender, EventArgs e)
         {
             UpdateOSFieldState();
         }
 
-        // Метод для обновления состояния поля OS
         private void UpdateOSFieldState()
         {
             bool isComputer = cmbType.SelectedItem?.ToString() == "Компьютер";
             txtOS.Enabled = isComputer;
-
-            // Очищаем поле, если выбран не компьютер
-            if (!isComputer)
-            {
-                txtOS.Text = string.Empty;
-            }
+            if (!isComputer) txtOS.Text = string.Empty;
         }
 
         private void LoadEquipmentTypes()
         {
-            // Получаем типы из базы данных
-            var types = _database.GetEquipmentTypes();
-
-            // Создаем список стандартных типов
-            var defaultTypes = new List<string> { "Компьютер", "Принтер", "Монитор" };
-
-            // Объединяем стандартные типы с полученными из базы, избегая дубликатов
-            var allTypes = new HashSet<string>(types); // Используем HashSet для удобства проверки наличия
-            foreach (var type in defaultTypes)
-            {
-                allTypes.Add(type); // Добавляем стандартные, если их ещё нет
-            }
-
-            // Очищаем ComboBox и заполняем объединенным списком
+            var types = new HashSet<string>(_database.GetEquipmentTypes());
+            types.UnionWith(new List<string> { "Компьютер", "Принтер", "Монитор" });
             cmbType.Items.Clear();
-            cmbType.Items.AddRange(allTypes.ToArray());
+            cmbType.Items.AddRange(types.ToArray());
         }
 
+        // В классе AddEditEquipmentForm
         private void btnSave_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                if (ValidateInput())
+                {
+                    // Явно устанавливаем результат диалога
+                    this.DialogResult = DialogResult.OK;
+                    this.Close();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка сохранения: {ex.Message}");
+            }
+        }
+
+
+
+        private bool ValidateInput()
         {
             if (cmbType.SelectedItem == null || string.IsNullOrWhiteSpace(txtModel.Text))
             {
                 MessageBox.Show("Заполните обязательные поля (Тип и Модель)!");
-                return;
+                return false;
+            }
+
+            // Проверка существования ответственного сотрудника
+            if (cmbMRP.SelectedValue != null)
+            {
+                if (cmbMRP.SelectedValue is int selectedId)
+                {
+                    var employee = _database.GetEmployeeById(selectedId);
+                    if (employee == null)
+                    {
+                        MessageBox.Show("Выбранный сотрудник не найден в базе данных!");
+                        return false;
+                    }
+                }
+                else
+                {
+                    MessageBox.Show("Ошибка в выборе сотрудника!");
+                    return false;
+                }
             }
 
             Type = cmbType.SelectedItem.ToString();
             Model = txtModel.Text.Trim();
             OS = txtOS.Text.Trim();
+            Console.WriteLine($"Selected Responsible ID: {cmbMRP.SelectedValue}");
+            return true;
+        }
 
-            DialogResult = DialogResult.OK;
-            Close();
+        //Material Responsible Person
+        private void lbMRP_MouseHover(object sender, EventArgs e)
+        {
+            toolTip1.SetToolTip(lbMRP, "Материально ответственное лицо");
         }
     }
 }

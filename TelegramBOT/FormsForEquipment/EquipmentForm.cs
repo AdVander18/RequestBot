@@ -1,8 +1,11 @@
 ﻿using System;
+using System.Data.SQLite;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Forms;
 using TelegramBOT.FormsForEquipment;
+using OfficeOpenXml;
+using System.IO;
 using static TelegramBOT.Database;
 
 namespace TelegramBOT
@@ -16,12 +19,14 @@ namespace TelegramBOT
         private Button btnEditEmployee;
         private ContextMenuStrip contextMenu;
         private DataGridView dataGridViewDetails; // Добавлен DataGridView
+        private readonly string _connectionString;
 
-        public EquipmentForm(Database db)
+        public EquipmentForm(Database db, string connectionString)
         {
             InitializeComponent();
 
             _database = db;
+            _connectionString = connectionString;
 
             // Инициализация DataGridView
             dataGridViewDetails = new DataGridView
@@ -79,7 +84,13 @@ namespace TelegramBOT
         private void LoadData()
         {
             TreeNode selectedNode = treeView.SelectedNode;
-            int[] selectedPath = selectedNode != null ? GetNodePath(selectedNode) : null;
+            int[] selectedPath = null;
+
+            if (selectedNode != null && selectedNode.Parent != null) // Добавлена проверка
+            {
+                selectedPath = GetNodePath(selectedNode);
+            }
+
             List<string> expandedPaths = GetAllExpandedNodePaths();
 
             treeView.BeginUpdate();
@@ -119,19 +130,20 @@ namespace TelegramBOT
             treeView.EndUpdate();
 
             RestoreExpandedNodes(expandedPaths);
-            RestoreSelectedNode(selectedPath);
+
+            if (selectedPath != null) // Добавлена проверка
+            {
+                RestoreSelectedNode(selectedPath);
+            }
         }
 
         private int[] GetNodePath(TreeNode node)
         {
             List<int> path = new List<int>();
-            while (node != null)
+            while (node != null && node.Parent != null) // Добавлена проверка на null
             {
-                if (node.Parent != null)
-                {
-                    int index = node.Parent.Nodes.IndexOf(node);
-                    path.Insert(0, index); // Добавляем индекс в начало списка
-                }
+                int index = node.Parent.Nodes.IndexOf(node);
+                path.Insert(0, index);
                 node = node.Parent;
             }
             return path.ToArray();
@@ -142,23 +154,50 @@ namespace TelegramBOT
         {
             if (path == null || path.Length == 0) return;
 
-            TreeNode currentNode = treeView.Nodes[path[0]];
-            for (int i = 1; i < path.Length; i++)
+            try
             {
-                if (currentNode.Nodes.Count > path[i])
+                TreeNode currentNode = null;
+                for (int i = 0; i < path.Length; i++)
                 {
-                    currentNode = currentNode.Nodes[path[i]];
+                    if (i == 0)
+                    {
+                        // Проверка индекса для корневых узлов
+                        if (path[i] < treeView.Nodes.Count)
+                        {
+                            currentNode = treeView.Nodes[path[i]];
+                        }
+                        else
+                        {
+                            return;
+                        }
+                    }
+                    else
+                    {
+                        // Проверка индекса для дочерних узлов
+                        if (currentNode != null &&
+                            path[i] < currentNode.Nodes.Count)
+                        {
+                            currentNode = currentNode.Nodes[path[i]];
+                        }
+                        else
+                        {
+                            return;
+                        }
+                    }
                 }
-                else
+
+                if (currentNode != null)
                 {
-                    return; // Если структура изменилась - выходим
+                    treeView.SelectedNode = currentNode;
                 }
             }
-            treeView.SelectedNode = currentNode;
-            currentNode.EnsureVisible();
+            catch (Exception ex)
+            {
+                // Логирование ошибки при необходимости
+                Console.WriteLine($"Ошибка восстановления узла: {ex.Message}");
+            }
         }
-
-        private List<string> GetAllExpandedNodePaths()
+private List<string> GetAllExpandedNodePaths()
         {
             var paths = new List<string>();
             foreach (TreeNode node in treeView.Nodes)
@@ -319,24 +358,63 @@ namespace TelegramBOT
             {
                 try
                 {
-                    // Исправлено: передаем _database первым параметром
-                    var form = new AddEditEquipmentForm(_database);
-                    if (form.ShowDialog() == DialogResult.OK)
+                    using (var form = new AddEditEquipmentForm(_database, cabinet.Id))
                     {
-                        if (string.IsNullOrWhiteSpace(form.Type) || string.IsNullOrWhiteSpace(form.Model))
-                        {
-                            throw new ArgumentException("Поля 'Тип' и 'Модель' обязательны для заполнения!");
-                        }
+                        // Явно устанавливаем владельца формы
+                        form.Owner = this;
+                        form.StartPosition = FormStartPosition.CenterParent;
 
-                        var equipment = new Equipment
+                        if (form.ShowDialog() == DialogResult.OK)
                         {
-                            Type = form.Type,
-                            Model = form.Model,
-                            OS = form.OS,
-                            CabinetId = cabinet.Id
-                        };
-                        _database.AddEquipment(equipment);
-                        LoadData();
+                            try
+                            {
+                                // Создаем объект оборудования
+                                var newEquipment = new Equipment
+                                {
+                                    Type = form.Type,
+                                    Model = form.Model,
+                                    OS = form.OS,
+                                    CabinetId = cabinet.Id,
+                                    ResponsibleEmployeeId = form.ResponsibleEmployeeId
+                                };
+
+                                // Сохраняем оборудование
+                                int newId = _database.AddEquipment(newEquipment);
+
+                                // Принудительно обновляем контекст БД
+                                Application.DoEvents();
+
+                                // Проверка записи
+                                var savedItem = _database.GetEquipmentById(newId);
+                                bool success = savedItem != null &&
+                                              savedItem.ResponsibleEmployeeId == form.ResponsibleEmployeeId;
+
+                                // Отображаем сообщение поверх всех окон
+                                try
+                                {
+                                    string logMessage = $"Saved: {success} | ResponsibleID: {form.ResponsibleEmployeeId} | Time: {DateTime.Now}";
+                                    string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
+                                    string logPath = Path.Combine(desktopPath, "debug.log");
+
+                                    File.WriteAllText(logPath, logMessage);
+                                }
+                                catch (Exception ex)
+                                {
+                                    Console.WriteLine($"Ошибка записи в лог: {ex.Message}");
+                                }
+
+
+                                LoadData();
+                            }
+                            catch (Exception ex)
+                            {
+                                MessageBox.Show(this,
+                                    $"Критическая ошибка:\n{ex.Message}",
+                                    "Ошибка",
+                                    MessageBoxButtons.OK,
+                                    MessageBoxIcon.Error);
+                            }
+                        }
                     }
                 }
                 catch (Exception ex)
@@ -350,20 +428,41 @@ namespace TelegramBOT
         {
             if (treeView.SelectedNode?.Tag is Equipment equipment)
             {
-                var form = new AddEditEquipmentForm(_database, equipment)
-                {
-                    StartPosition = FormStartPosition.CenterParent // Центрирование относительно родителя
-                };
+                var originalCabinetId = equipment.CabinetId;
 
-                if (form.ShowDialog(this) == DialogResult.OK) // Передаём текущую форму как владельца
+                using (var form = new AddEditEquipmentForm(_database, equipment.CabinetId, equipment))
                 {
-                    equipment.Type = form.Type;
-                    equipment.Model = form.Model;
-                    equipment.OS = form.OS;
-                    _database.UpdateEquipment(equipment);
-                    LoadData();
+                    if (form.ShowDialog() == DialogResult.OK)
+                    {
+                        equipment.Type = form.Type;
+                        equipment.Model = form.Model;
+                        equipment.OS = form.OS;
+                        equipment.ResponsibleEmployeeId = form.ResponsibleEmployeeId;
 
-                    this.Activate(); // Возвращаем фокус после закрытия диалога
+                        _database.UpdateEquipment(equipment);
+
+                        // Проверяем обновление
+                        int newId = _database.AddEquipment(equipment);
+                        var savedEquipment = _database.GetEquipmentById(newId);
+                        var updatedEquipment = _database.GetEquipmentById(equipment.Id);
+                        bool isUpdated = updatedEquipment != null
+                            && updatedEquipment.ResponsibleEmployeeId == form.ResponsibleEmployeeId;
+
+                        // Показываем результат
+                        MessageBox.Show(
+                            this,
+                            isUpdated
+                                ? "Данные успешно обновлены!"
+                                : "Ошибка обновления!",
+                            "Результат",
+                            MessageBoxButtons.OK,
+                            isUpdated ? MessageBoxIcon.Information : MessageBoxIcon.Error
+                        );
+                        Console.WriteLine($"Ожидаемый Responsible ID: {form.ResponsibleEmployeeId}");
+                        Console.WriteLine($"Сохраненный Responsible ID: {savedEquipment?.ResponsibleEmployeeId}");
+
+                        LoadData();
+                    }
                 }
             }
         }
@@ -392,6 +491,7 @@ namespace TelegramBOT
 
                     this.Activate(); // Возвращаем фокус после закрытия диалога
                 }
+
             }
         }
 
@@ -415,7 +515,9 @@ namespace TelegramBOT
 
                     this.Activate(); // Возвращаем фокус после закрытия диалога
                 }
+
             }
+
         }
 
         private void EditSelected()
@@ -454,7 +556,23 @@ namespace TelegramBOT
             LoadData();
         }
 
-        
+        public Employee GetEmployeeById(int id)
+        {
+            using (var connection = new SQLiteConnection(_connectionString))
+            {
+                connection.Open();
+                var cmd = new SQLiteCommand("SELECT * FROM Employees WHERE Id = @id", connection);
+                cmd.Parameters.AddWithValue("@id", id);
+                using (var reader = cmd.ExecuteReader())
+                {
+                    return reader.Read() ? new Employee
+                    {
+                        Id = Convert.ToInt32(reader["Id"]),
+                        // ... остальные поля
+                    } : null;
+                }
+            }
+        }
 
         private void treeView_AfterSelect(object sender, TreeViewEventArgs e)
         {
@@ -469,10 +587,22 @@ namespace TelegramBOT
             // Очищаем DataGridView
             dataGridViewDetails.Rows.Clear();
             dataGridViewDetails.Columns.Clear();
+            if (e.Node?.Tag is Cabinet cabinetNode && e.Node.Text == "Оборудование")
+            {
+                dataGridViewDetails.Columns.Add("Responsible", "Ответственный");
+                foreach (var eq in cabinetNode.Equipment)
+                {
+                    var responsible = eq.ResponsibleEmployeeId.HasValue
+                        ? _database.GetEmployeeById(eq.ResponsibleEmployeeId.Value)?.FullName
+                        : "Не назначен";
+                    dataGridViewDetails.Rows.Add(eq.Type, eq.Model, eq.OS, responsible);
+                }
+            }
 
             // Обработка отображения подробностей
             if (e.Node != null && e.Node.Level == 1) // Уровень 1: "Оборудование" или "Сотрудники"
             {
+
                 var parentNode = e.Node.Parent;
                 if (parentNode?.Tag is Cabinet cabinet)
                 {
@@ -512,7 +642,8 @@ namespace TelegramBOT
             // Обработка для конкретного оборудования
             if (selectedNode.Tag is Equipment equipment)
             {
-                var form = new AddEditEquipmentForm(_database, equipment);
+                // Передаем cabinetId из оборудования
+                var form = new AddEditEquipmentForm(_database, equipment.CabinetId, equipment);
                 if (form.ShowDialog() == DialogResult.OK)
                 {
                     equipment.Type = form.Type;
@@ -545,7 +676,8 @@ namespace TelegramBOT
             {
                 if (selectedNode.Text == "Оборудование")
                 {
-                    var form = new AddEditEquipmentForm(_database);
+                    // Получаем ID кабинета из родительского узла и передаем в конструктор
+                    var form = new AddEditEquipmentForm(_database, cabinet.Id); // <- ИСПРАВЛЕНО
                     if (form.ShowDialog() == DialogResult.OK)
                     {
                         var newEquipment = new Equipment
@@ -576,6 +708,154 @@ namespace TelegramBOT
                         LoadData();
                     }
                 }
+            }
+        }
+
+        private class EquipmentExport
+        {
+            public string Type { get; set; }
+            public string Model { get; set; }
+            public string OS { get; set; }
+            public string Cabinet { get; set; }
+            public int? ResponsibleEmployeeId { get; set; } // Добавьте это поле
+            public string Responsible { get; set; }
+        }
+
+        private class EmployeeExport
+        {
+            public string LastName { get; set; }
+            public string FirstName { get; set; }
+            public string Position { get; set; }
+            public string Cabinet { get; set; }
+        }
+
+        private void btnExportExcel_Click(object sender, EventArgs e)
+        {
+            try
+            {
+                ExcelPackage.LicenseContext = LicenseContext.NonCommercial;
+
+                var equipmentList = new List<EquipmentExport>();
+                var employeeList = new List<EmployeeExport>();
+
+                // Сбор данных из TreeView
+                foreach (TreeNode cabinetNode in treeView.Nodes)
+                {
+                    if (cabinetNode.Tag is Cabinet cabinet)
+                    {
+                        string cabinetInfo = string.IsNullOrEmpty(cabinet.Description)
+                            ? $"Кабинет {cabinet.Number}"
+                            : $"Кабинет {cabinet.Number} ({cabinet.Description})";
+
+                        foreach (TreeNode sectionNode in cabinetNode.Nodes)
+                        {
+                            if (sectionNode.Text == "Оборудование")
+                            {
+                                foreach (TreeNode eqNode in sectionNode.Nodes)
+                                {
+                                    if (eqNode.Tag is Equipment eq)
+                                    {
+                                        equipmentList.Add(new EquipmentExport
+                                        {
+                                            Type = eq.Type,
+                                            Model = eq.Model,
+                                            OS = eq.OS,
+                                            Cabinet = cabinetInfo,
+                                            ResponsibleEmployeeId = eq.ResponsibleEmployeeId
+                                        });
+                                    }
+                                }
+                            }
+                            else if (sectionNode.Text == "Сотрудники")
+                            {
+                                foreach (TreeNode empNode in sectionNode.Nodes)
+                                {
+                                    if (empNode.Tag is Employee emp)
+                                    {
+                                        employeeList.Add(new EmployeeExport
+                                        {
+                                            LastName = emp.LastName,
+                                            FirstName = emp.FirstName,
+                                            Position = emp.Position,
+                                            Cabinet = cabinetInfo
+                                        });
+                                    }
+                                }
+                            }
+                        }
+                    }
+                }
+
+                // Создание Excel файла
+                using (ExcelPackage excelPackage = new ExcelPackage())
+                {
+                    // Лист "Оборудование"
+                    ExcelWorksheet equipmentSheet = excelPackage.Workbook.Worksheets.Add("Оборудование");
+                    equipmentSheet.Cells[1, 1].Value = "Тип";
+                    equipmentSheet.Cells[1, 2].Value = "Модель";
+                    equipmentSheet.Cells[1, 3].Value = "ОС";
+                    equipmentSheet.Cells[1, 4].Value = "Кабинет";
+                    equipmentSheet.Cells[1, 5].Value = "Ответственный";
+
+                    int row = 2;
+                    foreach (var eq in equipmentList)
+                    {
+                        var responsible = eq.ResponsibleEmployeeId.HasValue
+                            ? _database.GetEmployeeById(eq.ResponsibleEmployeeId.Value)?.FullName
+                            : "Не назначен";
+
+                        equipmentSheet.Cells[row, 1].Value = eq.Type;
+                        equipmentSheet.Cells[row, 2].Value = eq.Model;
+                        equipmentSheet.Cells[row, 3].Value = eq.OS;
+                        equipmentSheet.Cells[row, 4].Value = eq.Cabinet;
+                        equipmentSheet.Cells[row, 5].Value = responsible;
+                        row++;
+                    }
+
+                    // Лист "Сотрудники"
+                    ExcelWorksheet employeeSheet = excelPackage.Workbook.Worksheets.Add("Сотрудники");
+                    employeeSheet.Cells[1, 1].Value = "Фамилия";
+                    employeeSheet.Cells[1, 2].Value = "Имя";
+                    employeeSheet.Cells[1, 3].Value = "Должность";
+                    employeeSheet.Cells[1, 4].Value = "Кабинет";
+
+                    row = 2;
+                    foreach (var emp in employeeList)
+                    {
+                        employeeSheet.Cells[row, 1].Value = emp.LastName;
+                        employeeSheet.Cells[row, 2].Value = emp.FirstName;
+                        employeeSheet.Cells[row, 3].Value = emp.Position;
+                        employeeSheet.Cells[row, 4].Value = emp.Cabinet;
+                        row++;
+                    }
+
+                    // Авто-ширина столбцов
+                    equipmentSheet.Cells[equipmentSheet.Dimension.Address].AutoFitColumns();
+                    employeeSheet.Cells[employeeSheet.Dimension.Address].AutoFitColumns();
+
+                    // Сохранение файла
+                    string savePath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.Desktop), "Оборудование в кабинетах.xlsx");
+                    FileInfo excelFile = new FileInfo(savePath);
+
+                    if (excelFile.Exists)
+                    {
+                        if (MessageBox.Show("Файл Оборудование в кабинетах.xlsx уже существует. Перезаписать?",
+                            "Подтверждение", MessageBoxButtons.YesNo, MessageBoxIcon.Question) != DialogResult.Yes)
+                        {
+                            return;
+                        }
+                        excelFile.Delete(); // Удаляем существующий файл перед сохранением
+                    }
+
+                    excelPackage.SaveAs(excelFile);
+                    MessageBox.Show($"Данные успешно экспортированы в файл: {savePath}",
+                        "Экспорт завершен", MessageBoxButtons.OK, MessageBoxIcon.Information);
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка при экспорте в Excel: {ex.Message}",
+                    "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
         }
     }

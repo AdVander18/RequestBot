@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             this.cmbType = new System.Windows.Forms.ComboBox();
             this.txtModel = new System.Windows.Forms.TextBox();
             this.txtOS = new System.Windows.Forms.TextBox();
@@ -35,6 +36,9 @@
             this.label1 = new System.Windows.Forms.Label();
             this.label2 = new System.Windows.Forms.Label();
             this.label3 = new System.Windows.Forms.Label();
+            this.lbMRP = new System.Windows.Forms.Label();
+            this.cmbMRP = new System.Windows.Forms.ComboBox();
+            this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.SuspendLayout();
             // 
             // cmbType
@@ -96,11 +100,32 @@
             this.label3.TabIndex = 6;
             this.label3.Text = "Операционная система:";
             // 
+            // lbMRP
+            // 
+            this.lbMRP.AutoSize = true;
+            this.lbMRP.Cursor = System.Windows.Forms.Cursors.Help;
+            this.lbMRP.Location = new System.Drawing.Point(141, 52);
+            this.lbMRP.Name = "lbMRP";
+            this.lbMRP.Size = new System.Drawing.Size(35, 13);
+            this.lbMRP.TabIndex = 8;
+            this.lbMRP.Text = "МОЛ:";
+            this.lbMRP.MouseHover += new System.EventHandler(this.lbMRP_MouseHover);
+            // 
+            // cmbMRP
+            // 
+            this.cmbMRP.FormattingEnabled = true;
+            this.cmbMRP.Location = new System.Drawing.Point(186, 49);
+            this.cmbMRP.Name = "cmbMRP";
+            this.cmbMRP.Size = new System.Drawing.Size(121, 21);
+            this.cmbMRP.TabIndex = 7;
+            // 
             // AddEditEquipmentForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(384, 261);
+            this.Controls.Add(this.lbMRP);
+            this.Controls.Add(this.cmbMRP);
             this.Controls.Add(this.label3);
             this.Controls.Add(this.label2);
             this.Controls.Add(this.label1);
@@ -124,5 +149,8 @@
         private System.Windows.Forms.Label label1;
         private System.Windows.Forms.Label label2;
         private System.Windows.Forms.Label label3;
+        private System.Windows.Forms.Label lbMRP;
+        private System.Windows.Forms.ComboBox cmbMRP;
+        private System.Windows.Forms.ToolTip toolTip1;
     }
 }

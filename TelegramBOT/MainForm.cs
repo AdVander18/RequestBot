@@ -285,10 +285,14 @@
 
         private void btnEquipment_Click(object sender, EventArgs e)
         {
-            var equipmentForm = new EquipmentForm(_database);
-            equipmentForm.Owner = this; // Явно указываем владельца
+            // Получаем строку подключения из существующей базы данных
+            string connectionString = _database.GetConnectionString();
+
+            // Создаем форму с правильными параметрами
+            var equipmentForm = new EquipmentForm(_database, connectionString);
+            equipmentForm.Owner = this;
             equipmentForm.Show();
-            this.Activate(); // Возвращаем фокус на MainForm
+            this.Activate();
         }
     }
 }

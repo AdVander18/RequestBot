@@ -14,6 +14,7 @@ namespace TelegramBOT
         public event Action MessageAdded;
         private readonly string _connectionString;
 
+
         public Database(string dbPath)
         {
             _connectionString = $"Data Source={dbPath};Version=3;";
@@ -92,7 +93,9 @@ namespace TelegramBOT
                     Model TEXT NOT NULL,
                     OS TEXT,
                     CabinetId INTEGER,
-                    FOREIGN KEY(CabinetId) REFERENCES Cabinets(Id)
+                    ResponsibleEmployeeId INTEGER,
+                    FOREIGN KEY(CabinetId) REFERENCES Cabinets(Id),
+                    FOREIGN KEY(ResponsibleEmployeeId) REFERENCES Employees(Id)
                 );
 
                 CREATE TABLE IF NOT EXISTS Employees (
@@ -240,7 +243,9 @@ namespace TelegramBOT
                         {
                             Id = Convert.ToInt32(reader["Id"]),
                             Number = reader["Number"].ToString(),
-                            Description = reader["Description"].ToString(),
+                            Description = reader["Description"] != DBNull.Value
+                                ? reader["Description"].ToString()
+                                : null, // Безопасное чтение
                             Equipment = new List<Equipment>(),
                             Employees = new List<Employee>()
                         };
@@ -265,7 +270,10 @@ namespace TelegramBOT
                                 Type = reader["Type"].ToString(),
                                 Model = reader["Model"].ToString(),
                                 OS = reader["OS"].ToString(),
-                                CabinetId = cabinet.Id
+                                CabinetId = cabinet.Id,
+                                ResponsibleEmployeeId = reader["ResponsibleEmployeeId"] != DBNull.Value
+                                    ? Convert.ToInt32(reader["ResponsibleEmployeeId"])
+                                    : (int?)null
                             });
                         }
                     }
@@ -445,14 +453,16 @@ namespace TelegramBOT
                 connection.Open();
                 var cmd = new SQLiteCommand(
                     @"UPDATE Equipment SET 
-                    Type = @type, 
-                    Model = @model, 
-                    OS = @os 
-                WHERE Id = @id", connection);
-
+                Type = @type, 
+                Model = @model, 
+                OS = @os, 
+                ResponsibleEmployeeId = @rid 
+            WHERE Id = @id",
+                    connection);
                 cmd.Parameters.AddWithValue("@type", equipment.Type);
                 cmd.Parameters.AddWithValue("@model", equipment.Model);
-                cmd.Parameters.AddWithValue("@os", equipment.OS);
+                cmd.Parameters.AddWithValue("@os", equipment.OS ?? (object)DBNull.Value);
+                cmd.Parameters.AddWithValue("@rid", equipment.ResponsibleEmployeeId ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@id", equipment.Id);
                 cmd.ExecuteNonQuery();
             }
@@ -488,6 +498,7 @@ namespace TelegramBOT
             public string Model { get; set; }
             public string OS { get; set; }
             public int CabinetId { get; set; }
+            public int? ResponsibleEmployeeId { get; set; } // Новое поле
         }
 
         public class Employee
@@ -498,21 +509,30 @@ namespace TelegramBOT
             public string Position { get; set; }
             public int CabinetId { get; set; }
             public string Username { get; set; }
+
+            // Добавьте это свойство
+            public string FullName => $"{LastName} {FirstName}";
+            public override string ToString() => FullName;
         }
 
-        public void AddEquipment(Equipment equipment)
+        public int AddEquipment(Equipment equipment)
         {
             using (var connection = new SQLiteConnection(_connectionString))
             {
                 connection.Open();
                 var cmd = new SQLiteCommand(
-                    "INSERT INTO Equipment (Type, Model, OS, CabinetId) " +
-                    "VALUES (@type, @model, @os, @cid)", connection);
+                    @"INSERT INTO Equipment (Type, Model, OS, CabinetId, ResponsibleEmployeeId) 
+            VALUES (@type, @model, @os, @cid, @rid);
+            SELECT last_insert_rowid();",
+                    connection);
+
                 cmd.Parameters.AddWithValue("@type", equipment.Type);
                 cmd.Parameters.AddWithValue("@model", equipment.Model);
-                cmd.Parameters.AddWithValue("@os", equipment.OS);
+                cmd.Parameters.AddWithValue("@os", equipment.OS ?? (object)DBNull.Value);
                 cmd.Parameters.AddWithValue("@cid", equipment.CabinetId);
-                cmd.ExecuteNonQuery();
+                cmd.Parameters.AddWithValue("@rid", equipment.ResponsibleEmployeeId ?? (object)DBNull.Value);
+
+                return Convert.ToInt32(cmd.ExecuteScalar());
             }
         }
 
@@ -580,10 +600,32 @@ namespace TelegramBOT
             using (var connection = new SQLiteConnection(_connectionString))
             {
                 connection.Open();
-                var cmd = new SQLiteCommand(
-                    "DELETE FROM Employees WHERE Id = @id", connection);
-                cmd.Parameters.AddWithValue("@id", employeeId);
-                cmd.ExecuteNonQuery();
+                using (var transaction = connection.BeginTransaction())
+                {
+                    try
+                    {
+                        // Обнулить ответственного в оборудовании
+                        var updateCmd = new SQLiteCommand(
+                            "UPDATE Equipment SET ResponsibleEmployeeId = NULL WHERE ResponsibleEmployeeId = @id",
+                            connection);
+                        updateCmd.Parameters.AddWithValue("@id", employeeId);
+                        updateCmd.ExecuteNonQuery();
+
+                        // Удалить сотрудника
+                        var deleteCmd = new SQLiteCommand(
+                            "DELETE FROM Employees WHERE Id = @id",
+                            connection);
+                        deleteCmd.Parameters.AddWithValue("@id", employeeId);
+                        deleteCmd.ExecuteNonQuery();
+
+                        transaction.Commit();
+                    }
+                    catch
+                    {
+                        transaction.Rollback();
+                        throw;
+                    }
+                }
             }
         }
 
@@ -628,8 +670,6 @@ namespace TelegramBOT
             }
         }
 
-
-
         public List<string> GetAllUsernames()
         {
             var usernames = new List<string>();
@@ -667,6 +707,107 @@ namespace TelegramBOT
                 }
             }
             return types;
+        }
+
+        public Equipment GetEquipmentById(int id)
+        {
+            try
+            {
+                using (var connection = new SQLiteConnection(_connectionString))
+                {
+                    connection.Open();
+                    var cmd = new SQLiteCommand(
+                        "SELECT Type, Model, OS, CabinetId, ResponsibleEmployeeId " +
+                        "FROM Equipment WHERE Id = @id",
+                        connection);
+
+                    cmd.Parameters.AddWithValue("@id", id);
+
+                    using (var reader = cmd.ExecuteReader())
+                    {
+                        if (reader.Read())
+                        {
+                            return new Equipment
+                            {
+                                Id = id,
+                                Type = reader["Type"].ToString(),
+                                Model = reader["Model"].ToString(),
+                                OS = reader["OS"].ToString(),
+                                CabinetId = Convert.ToInt32(reader["CabinetId"]),
+                                ResponsibleEmployeeId = reader["ResponsibleEmployeeId"] is DBNull
+                                ? (int?)null
+                                : Convert.ToInt32(reader["ResponsibleEmployeeId"])
+
+                            };
+                        }
+                    }
+                }
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Ошибка при получении оборудования: {ex.Message}");
+            }
+            return null;
+        }
+
+
+        public List<Employee> GetAllEmployees()
+        {
+            var employees = new List<Employee>();
+            using (var connection = new SQLiteConnection(_connectionString))
+            {
+                connection.Open();
+                var command = new SQLiteCommand("SELECT * FROM Employees", connection);
+                using (var reader = command.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        employees.Add(new Employee
+                        {
+                            Id = Convert.ToInt32(reader["Id"]),
+                            FirstName = reader["FirstName"].ToString(),
+                            LastName = reader["LastName"].ToString(),
+                            Position = reader["Position"].ToString(),
+                            Username = reader["Username"].ToString(),
+                            CabinetId = Convert.ToInt32(reader["CabinetId"])
+                        });
+                    }
+                }
+            }
+            return employees;
+        }
+
+        public Employee GetEmployeeById(int id)
+        {
+            using (var connection = new SQLiteConnection(_connectionString))
+            {
+                connection.Open();
+                var command = new SQLiteCommand(
+                    "SELECT * FROM Employees WHERE Id = @id",
+                    connection);
+                command.Parameters.AddWithValue("@id", id);
+
+                using (var reader = command.ExecuteReader())
+                {
+                    if (reader.Read())
+                    {
+                        return new Employee
+                        {
+                            Id = Convert.ToInt32(reader["Id"]),
+                            FirstName = reader["FirstName"].ToString(),
+                            LastName = reader["LastName"].ToString(),
+                            Position = reader["Position"].ToString(),
+                            Username = reader["Username"].ToString(),
+                            CabinetId = Convert.ToInt32(reader["CabinetId"])
+                        };
+                    }
+                }
+            }
+            return null;
+        }
+        public string GetConnectionString()
+        {
+            return _connectionString;
         }
     }
 }

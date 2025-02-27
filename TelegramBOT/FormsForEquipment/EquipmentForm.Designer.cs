@@ -33,11 +33,13 @@
             this.btnEdit = new System.Windows.Forms.Button();
             this.btnAddCabinet = new System.Windows.Forms.Button();
             this.treeView = new System.Windows.Forms.TreeView();
+            this.btnExportExcel = new System.Windows.Forms.Button();
             this.panel.SuspendLayout();
             this.SuspendLayout();
             // 
             // panel
             // 
+            this.panel.Controls.Add(this.btnExportExcel);
             this.panel.Controls.Add(this.btnRefresh);
             this.panel.Controls.Add(this.btnEdit);
             this.panel.Controls.Add(this.btnAddCabinet);
@@ -89,6 +91,16 @@
             this.treeView.AfterSelect += new System.Windows.Forms.TreeViewEventHandler(this.treeView_AfterSelect);
             this.treeView.DoubleClick += new System.EventHandler(this.treeView_DoubleClick);
             // 
+            // btnExportExcel
+            // 
+            this.btnExportExcel.Location = new System.Drawing.Point(353, 8);
+            this.btnExportExcel.Name = "btnExportExcel";
+            this.btnExportExcel.Size = new System.Drawing.Size(110, 23);
+            this.btnExportExcel.TabIndex = 3;
+            this.btnExportExcel.Text = "Экспорт в Excel";
+            this.btnExportExcel.UseVisualStyleBackColor = true;
+            this.btnExportExcel.Click += new System.EventHandler(this.btnExportExcel_Click);
+            // 
             // EquipmentForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
@@ -113,5 +125,6 @@
         private System.Windows.Forms.Button btnRefresh;
         private System.Windows.Forms.Button btnEdit;
         private System.Windows.Forms.TreeView treeView;
+        private System.Windows.Forms.Button btnExportExcel;
     }
 }
