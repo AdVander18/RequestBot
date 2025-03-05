@@ -23,7 +23,7 @@
             private TelegramBotClient botClient;
             private readonly Database _database;
             private string taskHelp = "help";
-            private string taskDone = "Окей, будет сделано👍";
+            private string taskDone = "Заявка принята в работу👍";
             private string currentUsername;
 
             public MainForm()

@@ -375,7 +375,9 @@ private List<string> GetAllExpandedNodePaths()
                                     Model = form.Model,
                                     OS = form.OS,
                                     CabinetId = cabinet.Id,
-                                    ResponsibleEmployeeId = form.ResponsibleEmployeeId
+                                    ResponsibleEmployeeId = form.ResponsibleEmployeeId > 0
+                                        ? form.ResponsibleEmployeeId
+                                        : null
                                 };
 
                                 // Сохраняем оборудование

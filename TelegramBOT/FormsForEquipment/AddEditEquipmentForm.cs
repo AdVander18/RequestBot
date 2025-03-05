@@ -59,16 +59,34 @@ namespace TelegramBOT.FormsForEquipment
 
         private void InitializeResponsibleComboBox(int cabinetId)
         {
-            var employeesInCabinet = _database.GetAllEmployees()
-                .Where(e => e.CabinetId == cabinetId)
-                .ToList();
+            try
+            {
+                var employeesInCabinet = _database.GetAllEmployees()
+                    .Where(e => e.CabinetId == cabinetId)
+                    .ToList();
 
-            cmbMRP.DataSource = employeesInCabinet;
-            cmbMRP.DisplayMember = "FullName";
-            cmbMRP.ValueMember = "Id";
+                // Добавляем элемент "Не назначено" с Id = -1
+                var dummy = new Employee
+                {
+                    Id = -1,
+                    FirstName = "Не назначено",
+                    LastName = ""
+                };
 
-            // Для отладки: проверьте, что список сотрудников не пуст
-            Console.WriteLine($"Загружено сотрудников: {employeesInCabinet.Count}");
+                var comboSource = new List<Employee> { dummy };
+                comboSource.AddRange(employeesInCabinet);
+
+                cmbMRP.DataSource = comboSource;
+                cmbMRP.DisplayMember = "FullName";
+                cmbMRP.ValueMember = "Id";
+
+                // Установка выбранного значения
+                cmbMRP.SelectedValue = _existingEquipment?.ResponsibleEmployeeId ?? -1;
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка загрузки сотрудников: {ex.Message}");
+            }
         }
 
         private void cmbType_SelectedIndexChanged(object sender, EventArgs e)
@@ -94,54 +112,78 @@ namespace TelegramBOT.FormsForEquipment
         // В классе AddEditEquipmentForm
         private void btnSave_Click(object sender, EventArgs e)
         {
-            try
+            if (ValidateInput())
             {
-                if (ValidateInput())
+                var equipment = new Equipment
                 {
-                    // Явно устанавливаем результат диалога
-                    this.DialogResult = DialogResult.OK;
-                    this.Close();
+                    Id = _existingEquipment?.Id ?? 0,
+                    Type = cmbType.SelectedItem.ToString(),
+                    Model = txtModel.Text,
+                    OS = txtOS.Text,
+                    CabinetId = _cabinetId,
+                    ResponsibleEmployeeId = ResponsibleEmployeeId
+                };
+
+                if (_existingEquipment == null)
+                {
+                    _database.AddEquipment(equipment);
                 }
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show($"Ошибка сохранения: {ex.Message}");
+                else
+                {
+                    _database.UpdateEquipment(equipment);
+                }
+
+                this.DialogResult = DialogResult.OK;
+                this.Close();
             }
         }
 
-
-
         private bool ValidateInput()
         {
+            // Проверка обязательных полей
             if (cmbType.SelectedItem == null || string.IsNullOrWhiteSpace(txtModel.Text))
             {
                 MessageBox.Show("Заполните обязательные поля (Тип и Модель)!");
                 return false;
             }
 
-            // Проверка существования ответственного сотрудника
-            if (cmbMRP.SelectedValue != null)
+            // Обработка МОЛ
+            try
             {
-                if (cmbMRP.SelectedValue is int selectedId)
+                if (cmbMRP.SelectedValue == null)
                 {
-                    var employee = _database.GetEmployeeById(selectedId);
-                    if (employee == null)
-                    {
-                        MessageBox.Show("Выбранный сотрудник не найден в базе данных!");
-                        return false;
-                    }
+                    ResponsibleEmployeeId = null;
                 }
                 else
                 {
-                    MessageBox.Show("Ошибка в выборе сотрудника!");
-                    return false;
+                    int selectedId = Convert.ToInt32(cmbMRP.SelectedValue);
+                    if (selectedId == -1)
+                    {
+                        ResponsibleEmployeeId = null;
+                    }
+                    else
+                    {
+                        var employee = _database.GetEmployeeById(selectedId);
+                        if (employee == null)
+                        {
+                            MessageBox.Show("Ошибка: выбранный сотрудник не найден!");
+                            return false;
+                        }
+                        ResponsibleEmployeeId = selectedId;
+                    }
                 }
             }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка выбора ответственного: {ex.Message}");
+                return false;
+            }
 
+            // Сохранение остальных данных
             Type = cmbType.SelectedItem.ToString();
             Model = txtModel.Text.Trim();
             OS = txtOS.Text.Trim();
-            Console.WriteLine($"Selected Responsible ID: {cmbMRP.SelectedValue}");
+
             return true;
         }
 
