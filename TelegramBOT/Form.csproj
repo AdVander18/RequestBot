@@ -185,6 +185,7 @@
     <Reference Include="System.ValueTuple, Version=4.0.3.0, Culture=neutral, PublicKeyToken=cc7b13ffcd2ddd51, processorArchitecture=MSIL">
       <HintPath>..\packages\System.ValueTuple.4.5.0\lib\net47\System.ValueTuple.dll</HintPath>
     </Reference>
+    <Reference Include="System.Windows.Forms.DataVisualization" />
     <Reference Include="System.Xml.Linq" />
     <Reference Include="System.Data.DataSetExtensions" />
     <Reference Include="Microsoft.CSharp" />
@@ -251,6 +252,12 @@
     </Compile>
     <Compile Include="Program.cs" />
     <Compile Include="Properties\AssemblyInfo.cs" />
+    <Compile Include="Reports\AnalyticsForm.cs">
+      <SubType>Form</SubType>
+    </Compile>
+    <Compile Include="Reports\AnalyticsForm.Designer.cs">
+      <DependentUpon>AnalyticsForm.cs</DependentUpon>
+    </Compile>
     <Compile Include="SnakeGame.cs">
       <SubType>Form</SubType>
     </Compile>
@@ -303,6 +310,9 @@
       <DependentUpon>Resources.resx</DependentUpon>
       <DesignTime>True</DesignTime>
     </Compile>
+    <EmbeddedResource Include="Reports\AnalyticsForm.resx">
+      <DependentUpon>AnalyticsForm.cs</DependentUpon>
+    </EmbeddedResource>
     <EmbeddedResource Include="SnakeGame.resx">
       <DependentUpon>SnakeGame.cs</DependentUpon>
     </EmbeddedResource>

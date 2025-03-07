@@ -69,7 +69,7 @@ namespace TelegramBOT
             Brush textBrush = daysOld > 7 ? Brushes.Red : Brushes.Black;
 
             // Рисуем кружок статуса
-            var statusColor = task.Status == "Completed" ? Color.Green : Color.Red;
+            var statusColor = task.Status == "Завершено" ? Color.Green : Color.Red;
             using (var brush = new SolidBrush(statusColor))
             {
                 e.Graphics.FillEllipse(brush, e.Bounds.Left + 2, e.Bounds.Top + 2, 12, 12);
@@ -93,7 +93,7 @@ namespace TelegramBOT
             if (index != ListBox.NoMatches)
             {
                 var task = (Database.TaskData)listBox1.Items[index];
-                task.Status = task.Status == "Completed" ? "Pending" : "Completed";
+                task.Status = task.Status == "Завершено" ? "Не завершено" : "Завершено";
                 _database.UpdateTaskStatus(task.Id, task.Status);
                 listBox1.Refresh();
                 UpdateSelectedTaskInfo();

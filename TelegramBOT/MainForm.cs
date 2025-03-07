@@ -14,6 +14,7 @@
     using PrinterRepairMaster;
     using System.Drawing;
     using System.Text.RegularExpressions;
+using TelegramBOT.Reports;
 
     namespace TelegramBOT
     {
@@ -293,6 +294,12 @@
             equipmentForm.Owner = this;
             equipmentForm.Show();
             this.Activate();
+        }
+
+        private void btnAnalytics_Click(object sender, EventArgs e)
+        {
+            var analyticsForm = new AnalyticsForm(_database);
+            analyticsForm.Show();
         }
     }
 }

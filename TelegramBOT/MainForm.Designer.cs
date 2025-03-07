@@ -40,6 +40,7 @@
             this.pbQrCode = new System.Windows.Forms.PictureBox();
             this.lbStartBot = new System.Windows.Forms.Label();
             this.btnEquipment = new System.Windows.Forms.Button();
+            this.btnAnalytics = new System.Windows.Forms.Button();
             this.menuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pbQrCode)).BeginInit();
             this.SuspendLayout();
@@ -70,7 +71,7 @@
             this.listViewUsers.Location = new System.Drawing.Point(93, 27);
             this.listViewUsers.MultiSelect = false;
             this.listViewUsers.Name = "listViewUsers";
-            this.listViewUsers.Size = new System.Drawing.Size(177, 155);
+            this.listViewUsers.Size = new System.Drawing.Size(177, 199);
             this.listViewUsers.TabIndex = 2;
             this.listViewUsers.UseCompatibleStateImageBehavior = false;
             // 
@@ -150,15 +151,26 @@
             this.btnEquipment.Name = "btnEquipment";
             this.btnEquipment.Size = new System.Drawing.Size(90, 42);
             this.btnEquipment.TabIndex = 7;
-            this.btnEquipment.Text = "Оборудование";
+            this.btnEquipment.Text = "Кабинеты";
             this.btnEquipment.UseVisualStyleBackColor = true;
             this.btnEquipment.Click += new System.EventHandler(this.btnEquipment_Click);
+            // 
+            // btnAnalytics
+            // 
+            this.btnAnalytics.Location = new System.Drawing.Point(2, 171);
+            this.btnAnalytics.Name = "btnAnalytics";
+            this.btnAnalytics.Size = new System.Drawing.Size(90, 42);
+            this.btnAnalytics.TabIndex = 8;
+            this.btnAnalytics.Text = "Аналитика";
+            this.btnAnalytics.UseVisualStyleBackColor = true;
+            this.btnAnalytics.Click += new System.EventHandler(this.btnAnalytics_Click);
             // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 450);
+            this.Controls.Add(this.btnAnalytics);
             this.Controls.Add(this.btnEquipment);
             this.Controls.Add(this.lbStartBot);
             this.Controls.Add(this.pbQrCode);
@@ -195,6 +207,7 @@
         private System.Windows.Forms.PictureBox pbQrCode;
         private System.Windows.Forms.Label lbStartBot;
         private System.Windows.Forms.Button btnEquipment;
+        private System.Windows.Forms.Button btnAnalytics;
     }
 }
 

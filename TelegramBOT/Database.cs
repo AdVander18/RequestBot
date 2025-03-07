@@ -42,7 +42,7 @@ namespace TelegramBOT
                 var messageCommand = new SQLiteCommand(
         @"INSERT INTO Messages 
             (Username, ChatId, MessageText, IsTask, Status, LastName, CabinetNumber) 
-            VALUES (@username, @chatId, @messageText, 1, 'Pending', @lastName, @cabinet)",
+            VALUES (@username, @chatId, @messageText, 1, 'Не завершено', @lastName, @cabinet)",
         connection);
 
                 messageCommand.Parameters.AddWithValue("@username", user.Username ?? "");
@@ -427,7 +427,7 @@ namespace TelegramBOT
                 messageCommand.Parameters.AddWithValue("@chatId", chatId);
                 messageCommand.Parameters.AddWithValue("@messageText", messageText);
                 messageCommand.Parameters.AddWithValue("@isTask", isTask);
-                messageCommand.Parameters.AddWithValue("@status", isTask ? "Pending" : "None");
+                messageCommand.Parameters.AddWithValue("@status", isTask ? "Не завершено" : "None");
 
                 await messageCommand.ExecuteNonQueryAsync();
             }
@@ -811,6 +811,98 @@ namespace TelegramBOT
         public string GetConnectionString()
         {
             return _connectionString;
+        }
+
+        // Коды для диаграмм или отчётов
+        public Dictionary<string, int> GetTaskStatusStatistics(string statusFilter = null)
+        {
+            var stats = new Dictionary<string, int>();
+            using (var conn = new SQLiteConnection(_connectionString))
+            {
+                conn.Open();
+                var query = @"
+            SELECT Status, COUNT(*) 
+            FROM Messages 
+            WHERE IsTask = 1 
+                AND (@statusFilter IS NULL 
+                     OR @statusFilter = 'Все' 
+                     OR Status = @statusFilter)
+            GROUP BY Status";
+
+                var cmd = new SQLiteCommand(query, conn);
+                cmd.Parameters.AddWithValue("@statusFilter",
+                    string.IsNullOrEmpty(statusFilter) || statusFilter == "Все"
+                        ? DBNull.Value
+                        : (object)statusFilter);
+
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        stats.Add(reader.GetString(0), reader.GetInt32(1));
+                    }
+                }
+            }
+            return stats;
+        }
+
+        public Dictionary<string, int> GetTasksPerCabinet(string statusFilter = null)
+        {
+            var stats = new Dictionary<string, int>();
+            using (var conn = new SQLiteConnection(_connectionString))
+            {
+                conn.Open();
+                var query = @"
+            SELECT COALESCE(CabinetNumber, 'Не указан'), COUNT(*)
+            FROM Messages 
+            WHERE IsTask = 1 
+                AND (@statusFilter IS NULL 
+                     OR @statusFilter = 'Все' 
+                     OR Status = @statusFilter)
+            GROUP BY CabinetNumber";
+
+                var cmd = new SQLiteCommand(query, conn);
+                cmd.Parameters.AddWithValue("@statusFilter",
+                    string.IsNullOrEmpty(statusFilter) || statusFilter == "Все"
+                        ? DBNull.Value
+                        : (object)statusFilter);
+
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        string cabinet = reader.GetString(0);
+                        stats.Add(cabinet, reader.GetInt32(1));
+                    }
+                }
+            }
+            return stats;
+        }
+
+        public Dictionary<string, int> GetProblemCabinets()
+        {
+            var stats = new Dictionary<string, int>();
+            using (var conn = new SQLiteConnection(_connectionString))
+            {
+                conn.Open();
+                var cmd = new SQLiteCommand(
+                    @"SELECT CabinetNumber, COUNT(*) 
+            FROM Messages 
+            WHERE IsTask = 1 AND Status = 'Не завершено' 
+            GROUP BY CabinetNumber 
+            ORDER BY COUNT(*) DESC 
+            LIMIT 5", conn);
+
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        string cabinet = reader.IsDBNull(0) ? "Не указан" : reader.GetString(0);
+                        stats.Add(cabinet, reader.GetInt32(1));
+                    }
+                }
+            }
+            return stats;
         }
     }
 }

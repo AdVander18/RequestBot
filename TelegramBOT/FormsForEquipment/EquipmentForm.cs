@@ -99,6 +99,7 @@ namespace TelegramBOT
             var cabinets = _database.GetAllCabinets();
             foreach (var cabinet in cabinets)
             {
+
                 // Формируем текст узла с учетом описания
                 string cabinetText = string.IsNullOrEmpty(cabinet.Description)
                     ? $"Кабинет {cabinet.Number}"
@@ -121,6 +122,16 @@ namespace TelegramBOT
                 {
                     employeesNode.Nodes.Add(new TreeNode($"{emp.LastName} {emp.FirstName}") { Tag = emp });
                 }
+                var empNode = new TreeNode("Сотрудники");
+                foreach (var emp in cabinet.Employees)
+                {
+                    empNode.Nodes.Add(new TreeNode($"{emp.LastName} {emp.FirstName}")
+                    {
+                        Tag = emp,
+                        ImageKey = "employee"
+                    });
+                }
+                node.Nodes.Add(empNode);
 
                 node.Nodes.Add(equipmentNode);
                 node.Nodes.Add(employeesNode);
@@ -735,6 +746,18 @@ private List<string> GetAllExpandedNodePaths()
                         row++;
                     }
 
+                    ExcelWorksheet tasksSheet = excelPackage.Workbook.Worksheets.Add("Задачи");
+                    tasksSheet.Cells[1, 1].Value = "Кабинет";
+                    tasksSheet.Cells[1, 2].Value = "Количество задач";
+                    var taskStats = _database.GetTasksPerCabinet();
+                    row = 2;
+                    foreach (var entry in taskStats)
+                    {
+                        tasksSheet.Cells[row, 1].Value = entry.Key;
+                        tasksSheet.Cells[row, 2].Value = entry.Value;
+                        row++;
+                    }
+
                     // Авто-ширина столбцов
                     equipmentSheet.Cells[equipmentSheet.Dimension.Address].AutoFitColumns();
                     employeeSheet.Cells[employeeSheet.Dimension.Address].AutoFitColumns();
@@ -763,6 +786,24 @@ private List<string> GetAllExpandedNodePaths()
                 MessageBox.Show($"Ошибка при экспорте в Excel: {ex.Message}",
                     "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
             }
+        }
+        // Отчёты или диаграммы
+
+        private DataGridView CreateEquipmentGrid()
+        {
+            var grid = new DataGridView { Dock = DockStyle.Fill };
+            grid.Columns.AddRange(
+                new DataGridViewTextBoxColumn { HeaderText = "Тип", DataPropertyName = "Type" },
+                new DataGridViewTextBoxColumn { HeaderText = "Модель", DataPropertyName = "Model" },
+                new DataGridViewTextBoxColumn { HeaderText = "ОС", DataPropertyName = "OS" },
+                new DataGridViewTextBoxColumn { HeaderText = "Кабинет", DataPropertyName = "Cabinet" }
+            );
+
+            var cabinets = _database.GetAllCabinets();
+            var equipmentList = cabinets.SelectMany(c => c.Equipment).ToList();
+            grid.DataSource = equipmentList;
+
+            return grid;
         }
     }
 }
