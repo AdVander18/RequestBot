@@ -352,118 +352,31 @@ private List<string> GetAllExpandedNodePaths()
             }
         }
 
+        // Для добавления оборудования:
         private void btnAddEquipment_Click(object sender, EventArgs e)
         {
             if (treeView.SelectedNode?.Tag is Cabinet cabinet)
             {
-                try
+                using (var form = new AddEditEquipmentForm(_database, cabinet.Id))
                 {
-                    using (var form = new AddEditEquipmentForm(_database, cabinet.Id))
+                    if (form.ShowDialog() == DialogResult.OK)
                     {
-                        // Явно устанавливаем владельца формы
-                        form.Owner = this;
-                        form.StartPosition = FormStartPosition.CenterParent;
-
-                        if (form.ShowDialog() == DialogResult.OK)
-                        {
-                            try
-                            {
-                                // Создаем объект оборудования
-                                var newEquipment = new Equipment
-                                {
-                                    Type = form.Type,
-                                    Model = form.Model,
-                                    OS = form.OS,
-                                    CabinetId = cabinet.Id,
-                                    ResponsibleEmployeeId = form.ResponsibleEmployeeId > 0
-                                        ? form.ResponsibleEmployeeId
-                                        : null
-                                };
-
-                                // Сохраняем оборудование
-                                int newId = _database.AddEquipment(newEquipment);
-
-                                // Принудительно обновляем контекст БД
-                                Application.DoEvents();
-
-                                // Проверка записи
-                                var savedItem = _database.GetEquipmentById(newId);
-                                bool success = savedItem != null &&
-                                              savedItem.ResponsibleEmployeeId == form.ResponsibleEmployeeId;
-
-                                // Отображаем сообщение поверх всех окон
-                                try
-                                {
-                                    string logMessage = $"Saved: {success} | ResponsibleID: {form.ResponsibleEmployeeId} | Time: {DateTime.Now}";
-                                    string desktopPath = Environment.GetFolderPath(Environment.SpecialFolder.Desktop);
-                                    string logPath = Path.Combine(desktopPath, "debug.log");
-
-                                    File.WriteAllText(logPath, logMessage);
-                                }
-                                catch (Exception ex)
-                                {
-                                    Console.WriteLine($"Ошибка записи в лог: {ex.Message}");
-                                }
-
-
-                                LoadData();
-                            }
-                            catch (Exception ex)
-                            {
-                                MessageBox.Show(this,
-                                    $"Критическая ошибка:\n{ex.Message}",
-                                    "Ошибка",
-                                    MessageBoxButtons.OK,
-                                    MessageBoxIcon.Error);
-                            }
-                        }
+                        LoadData(); // Только обновляем интерфейс
                     }
-                }
-                catch (Exception ex)
-                {
-                    MessageBox.Show(ex.Message, "Ошибка", MessageBoxButtons.OK, MessageBoxIcon.Error);
                 }
             }
         }
 
+        // Для редактирования оборудования:
         private void btnEditEquipment_Click(object sender, EventArgs e)
         {
             if (treeView.SelectedNode?.Tag is Equipment equipment)
             {
-                var originalCabinetId = equipment.CabinetId;
-
                 using (var form = new AddEditEquipmentForm(_database, equipment.CabinetId, equipment))
                 {
                     if (form.ShowDialog() == DialogResult.OK)
                     {
-                        equipment.Type = form.Type;
-                        equipment.Model = form.Model;
-                        equipment.OS = form.OS;
-                        equipment.ResponsibleEmployeeId = form.ResponsibleEmployeeId;
-
-                        _database.UpdateEquipment(equipment);
-
-                        // Проверяем обновление
-                        int newId = _database.AddEquipment(equipment);
-                        var savedEquipment = _database.GetEquipmentById(newId);
-                        var updatedEquipment = _database.GetEquipmentById(equipment.Id);
-                        bool isUpdated = updatedEquipment != null
-                            && updatedEquipment.ResponsibleEmployeeId == form.ResponsibleEmployeeId;
-
-                        // Показываем результат
-                        MessageBox.Show(
-                            this,
-                            isUpdated
-                                ? "Данные успешно обновлены!"
-                                : "Ошибка обновления!",
-                            "Результат",
-                            MessageBoxButtons.OK,
-                            isUpdated ? MessageBoxIcon.Information : MessageBoxIcon.Error
-                        );
-                        Console.WriteLine($"Ожидаемый Responsible ID: {form.ResponsibleEmployeeId}");
-                        Console.WriteLine($"Сохраненный Responsible ID: {savedEquipment?.ResponsibleEmployeeId}");
-
-                        LoadData();
+                        LoadData(); // Только обновляем интерфейс
                     }
                 }
             }
@@ -641,21 +554,18 @@ private List<string> GetAllExpandedNodePaths()
             var selectedNode = treeView.SelectedNode;
             if (selectedNode == null) return;
 
-            // Обработка для конкретного оборудования
             if (selectedNode.Tag is Equipment equipment)
             {
-                // Передаем cabinetId из оборудования
-                var form = new AddEditEquipmentForm(_database, equipment.CabinetId, equipment);
-                if (form.ShowDialog() == DialogResult.OK)
+                using (var form = new AddEditEquipmentForm(_database, equipment.CabinetId, equipment))
                 {
-                    equipment.Type = form.Type;
-                    equipment.Model = form.Model;
-                    equipment.OS = form.OS;
-                    _database.UpdateEquipment(equipment);
-                    LoadData();
+                    if (form.ShowDialog() == DialogResult.OK)
+                    {
+                        LoadData(); // Только обновляем интерфейс, сохранение уже сделано в форме
+                    }
                 }
-                return;
             }
+
+            
 
             // Обработка для конкретного сотрудника
             if (selectedNode.Tag is Employee employee)
@@ -676,21 +586,15 @@ private List<string> GetAllExpandedNodePaths()
             // Обработка для родительских узлов "Оборудование"/"Сотрудники"
             if (selectedNode.Level == 1 && selectedNode.Parent?.Tag is Cabinet cabinet)
             {
+                // Для нового оборудования:
                 if (selectedNode.Text == "Оборудование")
                 {
-                    // Получаем ID кабинета из родительского узла и передаем в конструктор
-                    var form = new AddEditEquipmentForm(_database, cabinet.Id); // <- ИСПРАВЛЕНО
-                    if (form.ShowDialog() == DialogResult.OK)
+                    using (var form = new AddEditEquipmentForm(_database, cabinet.Id))
                     {
-                        var newEquipment = new Equipment
+                        if (form.ShowDialog() == DialogResult.OK)
                         {
-                            Type = form.Type,
-                            Model = form.Model,
-                            OS = form.OS,
-                            CabinetId = cabinet.Id
-                        };
-                        _database.AddEquipment(newEquipment);
-                        LoadData();
+                            LoadData(); // Только обновляем интерфейс, сохранение уже сделано в форме
+                        }
                     }
                 }
                 else if (selectedNode.Text == "Сотрудники")

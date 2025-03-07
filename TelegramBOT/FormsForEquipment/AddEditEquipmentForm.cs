@@ -8,16 +8,16 @@ namespace TelegramBOT.FormsForEquipment
 {
     public partial class AddEditEquipmentForm : Form
     {
-        public int? ResponsibleEmployeeId { get; private set; }
-
         private readonly Database _database;
         private readonly int _cabinetId;
         private readonly Equipment _existingEquipment;
 
+        // Свойства для хранения данных
         public int CabinetId { get; private set; }
         public string Type { get; private set; }
         public string Model { get; private set; }
         public string OS { get; private set; }
+        public int? ResponsibleEmployeeId { get; private set; }
 
         public AddEditEquipmentForm(Database db, int cabinetId, Equipment existingEquipment = null)
         {
@@ -28,17 +28,20 @@ namespace TelegramBOT.FormsForEquipment
             _existingEquipment = existingEquipment;
 
             // Настройка интерфейса
+            ConfigureForm();
+            LoadEquipmentTypes();
+            InitializeResponsibleComboBox();
+            LoadExistingData();
+            UpdateOSFieldState();
+        }
+
+        private void ConfigureForm()
+        {
             this.FormBorderStyle = FormBorderStyle.FixedToolWindow;
             this.StartPosition = FormStartPosition.CenterParent;
             cmbType.AutoCompleteMode = AutoCompleteMode.SuggestAppend;
             cmbType.AutoCompleteSource = AutoCompleteSource.ListItems;
             cmbType.SelectedIndexChanged += cmbType_SelectedIndexChanged;
-
-            // Загрузка данных
-            LoadEquipmentTypes();
-            InitializeResponsibleComboBox(_cabinetId);
-            LoadExistingData();
-            UpdateOSFieldState();
         }
 
         private void LoadExistingData()
@@ -48,32 +51,20 @@ namespace TelegramBOT.FormsForEquipment
                 cmbType.SelectedItem = _existingEquipment.Type;
                 txtModel.Text = _existingEquipment.Model;
                 txtOS.Text = _existingEquipment.OS;
-
-                // Устанавливаем ответственного сотрудника
-                if (_existingEquipment.ResponsibleEmployeeId.HasValue)
-                {
-                    cmbMRP.SelectedValue = _existingEquipment.ResponsibleEmployeeId.Value;
-                }
+                ResponsibleEmployeeId = _existingEquipment.ResponsibleEmployeeId;
             }
         }
 
-        private void InitializeResponsibleComboBox(int cabinetId)
+        private void InitializeResponsibleComboBox()
         {
             try
             {
                 var employeesInCabinet = _database.GetAllEmployees()
-                    .Where(e => e.CabinetId == cabinetId)
+                    .Where(e => e.CabinetId == _cabinetId)
                     .ToList();
 
-                // Добавляем элемент "Не назначено" с Id = -1
-                var dummy = new Employee
-                {
-                    Id = -1,
-                    FirstName = "Не назначено",
-                    LastName = ""
-                };
-
-                var comboSource = new List<Employee> { dummy };
+                // Добавляем элемент "Не назначено"
+                var comboSource = new List<Employee> { new Employee { Id = -1, LastName = "Не назначено" } };
                 comboSource.AddRange(employeesInCabinet);
 
                 cmbMRP.DataSource = comboSource;
@@ -104,12 +95,11 @@ namespace TelegramBOT.FormsForEquipment
         private void LoadEquipmentTypes()
         {
             var types = new HashSet<string>(_database.GetEquipmentTypes());
-            types.UnionWith(new List<string> { "Компьютер", "Принтер", "Монитор" });
+            types.UnionWith(new[] { "Компьютер", "Принтер", "Монитор" });
             cmbType.Items.Clear();
-            cmbType.Items.AddRange(types.ToArray());
+            cmbType.Items.AddRange(types.OrderBy(t => t).ToArray());
         }
 
-        // В классе AddEditEquipmentForm
         private void btnSave_Click(object sender, EventArgs e)
         {
             if (ValidateInput())
@@ -117,9 +107,9 @@ namespace TelegramBOT.FormsForEquipment
                 var equipment = new Equipment
                 {
                     Id = _existingEquipment?.Id ?? 0,
-                    Type = cmbType.SelectedItem.ToString(),
-                    Model = txtModel.Text,
-                    OS = txtOS.Text,
+                    Type = Type,
+                    Model = Model,
+                    OS = OS,
                     CabinetId = _cabinetId,
                     ResponsibleEmployeeId = ResponsibleEmployeeId
                 };
@@ -147,31 +137,11 @@ namespace TelegramBOT.FormsForEquipment
                 return false;
             }
 
-            // Обработка МОЛ
+            // Обработка ответственного лица
             try
             {
-                if (cmbMRP.SelectedValue == null)
-                {
-                    ResponsibleEmployeeId = null;
-                }
-                else
-                {
-                    int selectedId = Convert.ToInt32(cmbMRP.SelectedValue);
-                    if (selectedId == -1)
-                    {
-                        ResponsibleEmployeeId = null;
-                    }
-                    else
-                    {
-                        var employee = _database.GetEmployeeById(selectedId);
-                        if (employee == null)
-                        {
-                            MessageBox.Show("Ошибка: выбранный сотрудник не найден!");
-                            return false;
-                        }
-                        ResponsibleEmployeeId = selectedId;
-                    }
-                }
+                var selectedId = (int)cmbMRP.SelectedValue;
+                ResponsibleEmployeeId = selectedId == -1 ? null : (int?)selectedId;
             }
             catch (Exception ex)
             {
@@ -187,7 +157,6 @@ namespace TelegramBOT.FormsForEquipment
             return true;
         }
 
-        //Material Responsible Person
         private void lbMRP_MouseHover(object sender, EventArgs e)
         {
             toolTip1.SetToolTip(lbMRP, "Материально ответственное лицо");
