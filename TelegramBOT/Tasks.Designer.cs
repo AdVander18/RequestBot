@@ -30,10 +30,12 @@ namespace TelegramBOT
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             this.listBox1 = new System.Windows.Forms.ListBox();
             this.textBox1 = new System.Windows.Forms.TextBox();
             this.btnDelete = new System.Windows.Forms.Button();
             this.btnRefresh = new System.Windows.Forms.PictureBox();
+            this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             ((System.ComponentModel.ISupportInitialize)(this.btnRefresh)).BeginInit();
             this.SuspendLayout();
             // 
@@ -75,6 +77,7 @@ namespace TelegramBOT
             this.btnRefresh.TabIndex = 4;
             this.btnRefresh.TabStop = false;
             this.btnRefresh.Click += new System.EventHandler(this.btnRefresh_Click);
+            this.btnRefresh.MouseHover += new System.EventHandler(this.btnRefresh_MouseHover);
             // 
             // Tasks
             // 
@@ -100,5 +103,6 @@ namespace TelegramBOT
         private System.Windows.Forms.TextBox textBox1;
         private System.Windows.Forms.Button btnDelete;
         private System.Windows.Forms.PictureBox btnRefresh;
+        private System.Windows.Forms.ToolTip toolTip1;
     }
 }

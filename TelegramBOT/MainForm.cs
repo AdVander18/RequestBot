@@ -15,6 +15,7 @@
     using System.Drawing;
     using System.Text.RegularExpressions;
 using TelegramBOT.Reports;
+using static System.Windows.Forms.VisualStyles.VisualStyleElement;
 
     namespace TelegramBOT
     {
@@ -300,6 +301,11 @@ using TelegramBOT.Reports;
         {
             var analyticsForm = new AnalyticsForm(_database);
             analyticsForm.Show();
+        }
+
+        private void pbQrCode_MouseHover(object sender, EventArgs e)
+        {
+            toolTip1.SetToolTip(pbQrCode, "Отсканируйте QR-код С помощью вашего устройства");
         }
     }
 }

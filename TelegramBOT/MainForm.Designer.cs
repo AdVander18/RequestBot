@@ -28,6 +28,7 @@
         /// </summary>
         private void InitializeComponent()
         {
+            this.components = new System.ComponentModel.Container();
             this.textBoxMessages = new System.Windows.Forms.TextBox();
             this.btnOpenAllMessages = new System.Windows.Forms.Button();
             this.listViewUsers = new System.Windows.Forms.ListView();
@@ -41,6 +42,7 @@
             this.lbStartBot = new System.Windows.Forms.Label();
             this.btnEquipment = new System.Windows.Forms.Button();
             this.btnAnalytics = new System.Windows.Forms.Button();
+            this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
             this.menuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pbQrCode)).BeginInit();
             this.SuspendLayout();
@@ -135,6 +137,7 @@
             this.pbQrCode.SizeMode = System.Windows.Forms.PictureBoxSizeMode.Zoom;
             this.pbQrCode.TabIndex = 5;
             this.pbQrCode.TabStop = false;
+            this.pbQrCode.MouseHover += new System.EventHandler(this.pbQrCode_MouseHover);
             // 
             // lbStartBot
             // 
@@ -208,6 +211,7 @@
         private System.Windows.Forms.Label lbStartBot;
         private System.Windows.Forms.Button btnEquipment;
         private System.Windows.Forms.Button btnAnalytics;
+        private System.Windows.Forms.ToolTip toolTip1;
     }
 }
 

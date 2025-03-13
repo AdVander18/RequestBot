@@ -158,5 +158,10 @@ namespace TelegramBOT
         {
 
         }
+
+        private void btnRefresh_MouseHover(object sender, EventArgs e)
+        {
+            toolTip1.SetToolTip(btnRefresh, "Обновить данные о задачах");
+        }
     }
 }

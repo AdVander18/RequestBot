@@ -120,18 +120,12 @@ namespace TelegramBOT
                 var employeesNode = new TreeNode("Сотрудники");
                 foreach (var emp in cabinet.Employees)
                 {
-                    employeesNode.Nodes.Add(new TreeNode($"{emp.LastName} {emp.FirstName}") { Tag = emp });
-                }
-                var empNode = new TreeNode("Сотрудники");
-                foreach (var emp in cabinet.Employees)
-                {
-                    empNode.Nodes.Add(new TreeNode($"{emp.LastName} {emp.FirstName}")
+                    employeesNode.Nodes.Add(new TreeNode($"{emp.LastName} {emp.FirstName}")
                     {
                         Tag = emp,
                         ImageKey = "employee"
                     });
                 }
-                node.Nodes.Add(empNode);
 
                 node.Nodes.Add(equipmentNode);
                 node.Nodes.Add(employeesNode);
