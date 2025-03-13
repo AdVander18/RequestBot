@@ -18,7 +18,7 @@
                 components.Dispose();
             }
             base.Dispose(disposing);
-        }
+        }   
 
         #region Windows Form Designer generated code
 
@@ -124,7 +124,7 @@
             this.btnOpenTasks.Name = "btnOpenTasks";
             this.btnOpenTasks.Size = new System.Drawing.Size(75, 42);
             this.btnOpenTasks.TabIndex = 4;
-            this.btnOpenTasks.Text = "Задания";
+            this.btnOpenTasks.Text = "Задачи";
             this.btnOpenTasks.UseVisualStyleBackColor = true;
             this.btnOpenTasks.Click += new System.EventHandler(this.buttonOpenTasks_Click);
             // 

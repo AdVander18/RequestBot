@@ -31,7 +31,8 @@ using static System.Windows.Forms.VisualStyles.VisualStyleElement;
             public MainForm()
             {
                 InitializeComponent();
-                this.BackColor = System.Drawing.Color.White;
+            this.Shown += (s, e) => this.Activate();
+            this.BackColor = System.Drawing.Color.White;
                 _database = new Database("messages.db");
                 LoadUserAccounts(); // Загрузка аккаунтов
                 listViewUsers.ItemSelectionChanged += ListView1_ItemSelectionChanged; // Подписка на событие
