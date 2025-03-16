@@ -6,6 +6,7 @@
   <PropertyGroup>
     <Configuration Condition=" '$(Configuration)' == '' ">Debug</Configuration>
     <Platform Condition=" '$(Platform)' == '' ">AnyCPU</Platform>
+    <Prefer32Bit>false</Prefer32Bit>
     <ProjectGuid>{CE253BB9-3D52-4FD3-A319-80B8186AA86D}</ProjectGuid>
     <OutputType>WinExe</OutputType>
     <RootNamespace>TelegramBOT</RootNamespace>

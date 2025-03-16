@@ -59,6 +59,7 @@
             // 
             // btnOpenAllMessages
             // 
+            this.btnOpenAllMessages.FlatAppearance.BorderSize = 0;
             this.btnOpenAllMessages.Location = new System.Drawing.Point(12, 27);
             this.btnOpenAllMessages.Name = "btnOpenAllMessages";
             this.btnOpenAllMessages.Size = new System.Drawing.Size(75, 42);
@@ -73,7 +74,7 @@
             this.listViewUsers.Location = new System.Drawing.Point(93, 27);
             this.listViewUsers.MultiSelect = false;
             this.listViewUsers.Name = "listViewUsers";
-            this.listViewUsers.Size = new System.Drawing.Size(177, 199);
+            this.listViewUsers.Size = new System.Drawing.Size(189, 199);
             this.listViewUsers.TabIndex = 2;
             this.listViewUsers.UseCompatibleStateImageBehavior = false;
             // 

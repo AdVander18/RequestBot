@@ -1,6 +1,7 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.Data.SQLite;
+using System.IO;
 using System.Linq;
 using System.Text;
 using System.Threading.Tasks;
@@ -14,11 +15,24 @@ namespace TelegramBOT
         public event Action MessageAdded;
         private readonly string _connectionString;
 
-
         public Database(string dbPath)
         {
-            _connectionString = $"Data Source={dbPath};Version=3;";
-            InitializeDatabase();
+            try
+            {
+                var directory = Path.GetDirectoryName(dbPath);
+                if (!Directory.Exists(directory))
+                {
+                    Directory.CreateDirectory(directory);
+                }
+
+                _connectionString = $"Data Source={dbPath};Version=3;";
+                InitializeDatabase();
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка инициализации БД: {ex.Message}");
+                throw;
+            }
         }
 
         public async Task AddTaskMessageAsync(User user, long chatId, string lastName, string cabinet, string description)

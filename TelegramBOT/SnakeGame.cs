@@ -22,6 +22,8 @@ namespace TelegramBOT
 
         public SnakeGame()
         {
+            this.StartPosition = FormStartPosition.CenterScreen;
+            this.FormBorderStyle = FormBorderStyle.FixedToolWindow;
             InitializeComponent();
             InitializeGame();
             SetupTimer();

@@ -16,6 +16,7 @@
     using System.Text.RegularExpressions;
 using TelegramBOT.Reports;
 using static System.Windows.Forms.VisualStyles.VisualStyleElement;
+using System.IO;
 
     namespace TelegramBOT
     {
@@ -28,34 +29,74 @@ using static System.Windows.Forms.VisualStyles.VisualStyleElement;
             private string taskDone = "Заявка принята в работу👍";
             private string currentUsername;
 
-            public MainForm()
+        public MainForm()
+        {
+            InitializeComponent(); // Только ОДИН вызов!
+
+            // Проверка пути БД
+            string dbPath = Path.Combine(
+                Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
+                "MyApp",
+                "messages.db"
+            );
+            //MessageBox.Show($"База данных будет создана здесь: {dbPath}"); // Для отладки
+
+            _database = new Database(dbPath);
+
+            // Настройка ListView
+            listViewUsers.View = View.Details;
+            listViewUsers.Columns.Add("Пользователи", listViewUsers.Width - 25); // Ширина колонки
+            listViewUsers.HeaderStyle = ColumnHeaderStyle.None;
+
+            // Загрузка данных
+            LoadUserAccounts();
+
+            // Подписка на события
+            listViewUsers.ItemSelectionChanged += ListView1_ItemSelectionChanged;
+
+            // Запуск бота
+            AppendToTextBox("Запуск бота...");
+            try
             {
-                InitializeComponent();
-            this.Shown += (s, e) => this.Activate();
-            this.BackColor = System.Drawing.Color.White;
-                _database = new Database("messages.db");
-                LoadUserAccounts(); // Загрузка аккаунтов
-                listViewUsers.ItemSelectionChanged += ListView1_ItemSelectionChanged; // Подписка на событие
-                AppendToTextBox("Запуск бота...");
                 botClient = new TelegramBotClient(client);
-
-                // Удаляем вебхук
                 botClient.DeleteWebhookAsync().Wait();
-
-                var receiverOptions = new ReceiverOptions
-                {
-                    AllowedUpdates = Array.Empty<UpdateType>()
-                };
+                var receiverOptions = new ReceiverOptions { AllowedUpdates = Array.Empty<UpdateType>() };
                 botClient.StartReceiving(Update, Error, receiverOptions);
                 AppendToTextBox("Бот запущен и ожидает сообщений...");
-                _database.MessageAdded += () =>
-                {
-                    // Обновляем список при добавлении нового сообщения
-                    LoadUserAccounts();
-                };
             }
+            catch (Exception ex)
+            {
+                AppendToTextBox($"Ошибка запуска бота: {ex.Message}");
+            }
+        }
 
-            private void ListView1_ItemSelectionChanged(object sender, ListViewItemSelectionChangedEventArgs e)
+        private void LoadUserAccounts()
+        {
+            try
+            {
+                if (listViewUsers.InvokeRequired)
+                {
+                    listViewUsers.Invoke(new Action(LoadUserAccounts));
+                    return;
+                }
+
+                listViewUsers.Items.Clear();
+                var usernames = _database.GetUniqueUsernames();
+                //MessageBox.Show($"Найдено пользователей: {usernames.Count}"); // Для отладки
+
+                foreach (var username in usernames)
+                {
+                    listViewUsers.Items.Add(new ListViewItem(username));
+                }
+                listViewUsers.AutoResizeColumns(ColumnHeaderAutoResizeStyle.ColumnContent);
+            }
+            catch (Exception ex)
+            {
+                AppendToTextBox($"Ошибка загрузки пользователей: {ex.Message}");
+            }
+        }
+
+        private void ListView1_ItemSelectionChanged(object sender, ListViewItemSelectionChangedEventArgs e)
             {
                 if (e.IsSelected) // Проверяем, выбран ли элемент
                 {
@@ -242,31 +283,7 @@ using static System.Windows.Forms.VisualStyles.VisualStyleElement;
                 Tasks tasksForm = new Tasks(_database);
                 tasksForm.Show();
             }
-            private void LoadUserAccounts()
-            {
-                // Используем Invoke для потокобезопасности
-                if (listViewUsers.InvokeRequired)
-                {
-                    listViewUsers.Invoke(new Action(LoadUserAccounts));
-                    return;
-                }
-
-                listViewUsers.Items.Clear();
-                var usernames = _database.GetUniqueUsernames();
-
-                foreach (var username in usernames)
-                {
-                    // Проверяем, существует ли уже пользователь в списке
-                    if (!listViewUsers.Items.Cast<ListViewItem>().Any(i => i.Text == username))
-                    {
-                        listViewUsers.Items.Add(new ListViewItem(username));
-                    }
-                }
-                if (listViewUsers.Items.Count > 0)
-                {
-                    listViewUsers.Items[listViewUsers.Items.Count - 1].EnsureVisible();
-                }
-            }
+            
 
             private void починиПринтерToolStripMenuItem_Click(object sender, EventArgs e)
             {

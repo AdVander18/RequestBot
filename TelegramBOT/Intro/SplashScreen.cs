@@ -134,15 +134,26 @@ namespace TelegramBOT.Intro
                 return;
             }
 
-            // Синхронная анимация закрытия
+            e.Cancel = true; // Откладываем закрытие для анимации
+            StartClosingAnimation();
+        }
+
+        private async void StartClosingAnimation()
+        {
+            // Анимация прозрачности
             for (double opacity = 1.0; opacity > 0; opacity -= 0.05)
             {
+                if (this.IsDisposed) break;
                 this.Opacity = opacity;
-                Application.DoEvents();
-                Thread.Sleep(30);
+                await Task.Delay(30);
             }
 
-            base.OnFormClosing(e);
+            // Корректно закрываем форму после анимации
+            this.BeginInvoke(new Action(() =>
+            {
+                this.Close();
+                this.Dispose();
+            }));
         }
 
         protected override void OnClosed(EventArgs e)

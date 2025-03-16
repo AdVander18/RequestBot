@@ -1,4 +1,5 @@
 ﻿using System;
+using System.IO;
 using System.Threading;
 using System.Windows.Forms;
 
@@ -9,8 +10,10 @@ namespace TelegramBOT
         [STAThread]
         static void Main()
         {
+            Application.SetUnhandledExceptionMode(UnhandledExceptionMode.CatchException);
             Application.EnableVisualStyles();
-            Application.SetCompatibleTextRenderingDefault(false);
+            Application.ThreadException += (sender, e) => LogException(e.Exception);
+            AppDomain.CurrentDomain.UnhandledException += (sender, e) => LogException(e.ExceptionObject as Exception);
 
             // Создаем Splash Screen и его поток
             var splash = new Intro.SplashScreen();
@@ -43,6 +46,12 @@ namespace TelegramBOT
 
             // Запускаем главную форму
             Application.Run(new MainForm());
+        }
+        private static void LogException(Exception ex)
+        {
+            string logPath = Path.Combine(Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData), "MyAppLog.txt");
+            File.AppendAllText(logPath, $"[{DateTime.Now}] ERROR: {ex?.ToString()}\n");
+            MessageBox.Show($"Critical error: {ex?.Message}\nCheck log: {logPath}", "Error", MessageBoxButtons.OK, MessageBoxIcon.Error);
         }
     }
 }
