@@ -37,7 +37,7 @@
             this.BackColor = System.Drawing.SystemColors.GrayText;
             this.ClientSize = new System.Drawing.Size(800, 450);
             this.Name = "GamePrinter";
-            this.Text = "GamePrinter";
+            this.Text = "Почини принтер";
             this.Load += new System.EventHandler(this.GamePrinter_Load);
             this.KeyDown += new System.Windows.Forms.KeyEventHandler(this.GamePrinter_KeyDown);
             this.ResumeLayout(false);

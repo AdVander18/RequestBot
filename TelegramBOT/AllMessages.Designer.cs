@@ -49,7 +49,7 @@
             this.ClientSize = new System.Drawing.Size(800, 450);
             this.Controls.Add(this.textBox1);
             this.Name = "AllMessages";
-            this.Text = "AllMessages";
+            this.Text = "Все сообщения";
             this.Load += new System.EventHandler(this.AllMessages_Load);
             this.ResumeLayout(false);
             this.PerformLayout();
