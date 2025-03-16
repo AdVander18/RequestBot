@@ -36,7 +36,7 @@ using System.IO;
             // Проверка пути БД
             string dbPath = Path.Combine(
                 Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData),
-                "MyApp",
+                "MyApp",//База данных находится в папке %appdata%/MyApp
                 "messages.db"
             );
             //MessageBox.Show($"База данных будет создана здесь: {dbPath}"); // Для отладки
