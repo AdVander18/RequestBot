@@ -43,18 +43,21 @@
             this.btnEquipment = new System.Windows.Forms.Button();
             this.btnAnalytics = new System.Windows.Forms.Button();
             this.toolTip1 = new System.Windows.Forms.ToolTip(this.components);
+            this.tbSendMessage = new System.Windows.Forms.TextBox();
+            this.btnSendMessage = new System.Windows.Forms.Button();
             this.menuStrip1.SuspendLayout();
             ((System.ComponentModel.ISupportInitialize)(this.pbQrCode)).BeginInit();
             this.SuspendLayout();
             // 
             // textBoxMessages
             // 
+            this.textBoxMessages.HideSelection = false;
             this.textBoxMessages.Location = new System.Drawing.Point(288, 27);
             this.textBoxMessages.Multiline = true;
             this.textBoxMessages.Name = "textBoxMessages";
             this.textBoxMessages.ReadOnly = true;
             this.textBoxMessages.ScrollBars = System.Windows.Forms.ScrollBars.Both;
-            this.textBoxMessages.Size = new System.Drawing.Size(512, 423);
+            this.textBoxMessages.Size = new System.Drawing.Size(512, 279);
             this.textBoxMessages.TabIndex = 0;
             // 
             // btnOpenAllMessages
@@ -70,13 +73,16 @@
             // 
             // listViewUsers
             // 
+            this.listViewUsers.FullRowSelect = true;
             this.listViewUsers.HideSelection = false;
             this.listViewUsers.Location = new System.Drawing.Point(93, 27);
             this.listViewUsers.MultiSelect = false;
             this.listViewUsers.Name = "listViewUsers";
+            this.listViewUsers.OwnerDraw = true;
             this.listViewUsers.Size = new System.Drawing.Size(189, 199);
             this.listViewUsers.TabIndex = 2;
             this.listViewUsers.UseCompatibleStateImageBehavior = false;
+            this.listViewUsers.View = System.Windows.Forms.View.Details;
             // 
             // menuStrip1
             // 
@@ -169,11 +175,32 @@
             this.btnAnalytics.UseVisualStyleBackColor = true;
             this.btnAnalytics.Click += new System.EventHandler(this.btnAnalytics_Click);
             // 
+            // tbSendMessage
+            // 
+            this.tbSendMessage.Location = new System.Drawing.Point(288, 313);
+            this.tbSendMessage.Multiline = true;
+            this.tbSendMessage.Name = "tbSendMessage";
+            this.tbSendMessage.Size = new System.Drawing.Size(419, 43);
+            this.tbSendMessage.TabIndex = 9;
+            this.tbSendMessage.KeyDown += new System.Windows.Forms.KeyEventHandler(this.tbSendMessage_KeyDown);
+            // 
+            // btnSendMessage
+            // 
+            this.btnSendMessage.Location = new System.Drawing.Point(713, 321);
+            this.btnSendMessage.Name = "btnSendMessage";
+            this.btnSendMessage.Size = new System.Drawing.Size(75, 27);
+            this.btnSendMessage.TabIndex = 10;
+            this.btnSendMessage.Text = "Отправить";
+            this.btnSendMessage.UseVisualStyleBackColor = true;
+            this.btnSendMessage.Click += new System.EventHandler(this.btnSendMessage_Click);
+            // 
             // MainForm
             // 
             this.AutoScaleDimensions = new System.Drawing.SizeF(6F, 13F);
             this.AutoScaleMode = System.Windows.Forms.AutoScaleMode.Font;
             this.ClientSize = new System.Drawing.Size(800, 450);
+            this.Controls.Add(this.btnSendMessage);
+            this.Controls.Add(this.tbSendMessage);
             this.Controls.Add(this.btnAnalytics);
             this.Controls.Add(this.btnEquipment);
             this.Controls.Add(this.lbStartBot);
@@ -213,6 +240,8 @@
         private System.Windows.Forms.Button btnEquipment;
         private System.Windows.Forms.Button btnAnalytics;
         private System.Windows.Forms.ToolTip toolTip1;
+        private System.Windows.Forms.TextBox tbSendMessage;
+        private System.Windows.Forms.Button btnSendMessage;
     }
 }
 

@@ -18,8 +18,20 @@ namespace TelegramBOT
         public Tasks(Database database)
         {
             InitializeComponent();
-            StartPosition = FormStartPosition.CenterScreen;
-            FormBorderStyle = FormBorderStyle.FixedToolWindow;
+            // Убираем FixedToolWindow для нормального поведения
+            this.FormBorderStyle = FormBorderStyle.SizableToolWindow;
+            this.StartPosition = FormStartPosition.Manual;
+            this.ShowInTaskbar = false;
+
+            // Добавляем обработчик закрытия
+            this.FormClosing += (s, e) =>
+            {
+                if (this.Owner != null)
+                {
+                    this.Owner.WindowState = FormWindowState.Normal;
+                    this.Owner.Activate();
+                }
+            };
             _database = database;
 
             listBox1.DrawMode = DrawMode.OwnerDrawFixed;
@@ -67,26 +79,34 @@ namespace TelegramBOT
 
             // Цвет текста в зависимости от возраста
             Brush textBrush = daysOld > 7 ? Brushes.Red : Brushes.Black;
+            Color? statusColor = null;
 
-            // Рисуем кружок статуса
-            var statusColor = task.Status == "Завершено" ? Color.Green : Color.Red;
-            using (var brush = new SolidBrush(statusColor))
+            // Определяем необходимость отрисовки кружка
+            if (task.Status == "Завершено")
             {
-                e.Graphics.FillEllipse(brush, e.Bounds.Left + 2, e.Bounds.Top + 2, 12, 12);
+                statusColor = Color.Green;
+            }
+            else if (daysOld > 7)
+            {
+                statusColor = Color.Red;
             }
 
-            // Добавляем восклицательный знак для старых задач
-            if (daysOld > 7)
+            // Рисуем кружок статуса только если нужно
+            if (statusColor.HasValue)
             {
-                e.Graphics.DrawString("!", e.Font, Brushes.Red, e.Bounds.Left + 16, e.Bounds.Top);
+                using (var brush = new SolidBrush(statusColor.Value))
+                {
+                    e.Graphics.FillEllipse(brush, e.Bounds.Left + 2, e.Bounds.Top + 2, 12, 12);
+                }
             }
 
-            // Рисуем текст задания
+            // Рисуем текст задания (с отступом 30px всегда)
             e.Graphics.DrawString(task.MessageText, e.Font, textBrush,
                 new RectangleF(e.Bounds.Left + 30, e.Bounds.Top, e.Bounds.Width - 30, e.Bounds.Height));
 
             e.DrawFocusRectangle();
         }
+
         private void ListBox1_MouseDoubleClick(object sender, MouseEventArgs e)
         {
             int index = listBox1.IndexFromPoint(e.Location);
@@ -112,7 +132,7 @@ namespace TelegramBOT
 
                 textBox1.Text = $"ID: {task.Id}" + Environment.NewLine +
                                 $"Дата создания: {task.Timestamp:dd.MM.yyyy HH:mm}" + Environment.NewLine +
-                                $"Возраст задачи: {Math.Floor(daysOld)} дней" + Environment.NewLine +
+                                $"Дней с создания задачи: {Math.Floor(daysOld)}" + Environment.NewLine +
                                 $"Фамилия: {task.LastName ?? "Не указано"}" + Environment.NewLine +
                                 $"Имя: {task.FirstName ?? "Не указано"}" + Environment.NewLine +
                                 $"Номер кабинета: {task.CabinetNumber ?? "Не указано"}" + Environment.NewLine +

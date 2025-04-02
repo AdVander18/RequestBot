@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using System.Threading;
+using System.Threading.Tasks;
 using System.Windows.Forms;
 
 
@@ -16,37 +17,48 @@ namespace TelegramBOT
             Application.ThreadException += (sender, e) => LogException(e.Exception);
             AppDomain.CurrentDomain.UnhandledException += (sender, e) => LogException(e.ExceptionObject as Exception);
 
-            // Создаем Splash Screen и его поток
+            // Создаем Splash Screen и главную форму
             var splash = new Intro.SplashScreen();
-            var splashThread = new Thread(() =>
-            {
-                Application.Run(splash);
-            })
-            {
-                IsBackground = true
-            };
-            splashThread.SetApartmentState(ApartmentState.STA);
-            splashThread.Start();
+            MainForm mainForm = null;
 
-            // Имитация загрузки в главном потоке
-            for (int i = 0; i <= 100; i++)
+            // Показываем Splash Screen
+            splash.Show();
+
+            // Запускаем фоновую загрузку
+            Task.Run(() =>
             {
-                splash.UpdateStatus($"Загрузка: {i}%");
-                Thread.Sleep(50);
-            }
+                try
+                {
+                    for (int i = 0; i <= 100; i++)
+                    {
+                        splash.BeginInvoke((Action)(() =>
+                            splash.UpdateStatus($"Загрузка: {i}%")));
+                        Thread.Sleep(50);
+                    }
+                }
+                finally
+                {
+                    // Закрытие Splash и показ MainForm в UI-потоке
+                    splash.BeginInvoke((Action)(() =>
+                    {
+                        mainForm = new MainForm();
+                        mainForm.FormClosed += (s, e) => Application.Exit(); // Обработчик закрытия
+                        mainForm.Shown += (s, e) =>
+                        {
+                            if (!splash.IsDisposed)
+                            {
+                                splash.Close();
+                                splash.Dispose();
+                            }
+                        };
+                        mainForm.Show();
+                    }));
+                }
+            });
 
-            // Закрываем Splash Screen
-            splash.Invoke(new Action(() =>
-            {
-                splash.Close();
-                splash.Dispose();
-            }));
+            // Запускаем цикл сообщений
+            Application.Run(mainForm);
 
-            // Дожидаемся завершения потока splash screen
-            splashThread.Join();
-
-            // Запускаем главную форму
-            Application.Run(new MainForm());
         }
         private static void LogException(Exception ex)
         {

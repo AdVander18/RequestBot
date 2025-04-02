@@ -17,6 +17,8 @@ namespace TelegramBOT.Reports
         private TabControl tabControl;
         private Chart statusChart; // График статусов (вкладка 1)
         private Chart cabinetChart; // График кабинетов (вкладка 2)
+        private ComboBox timeFilterComboBox;
+        private string currentTimeFilter = "month";
 
         public AnalyticsForm(Database database)
         {
@@ -36,12 +38,30 @@ namespace TelegramBOT.Reports
 
             // Вкладка "Распределение по кабинетам"
             var cabinetTab = new TabPage("Кабинеты");
-            cabinetTab.Controls.Add(cabinetChart); // Используем сохраненный график
+            var cabinetPanel = new Panel { Dock = DockStyle.Fill };
+            cabinetPanel.Controls.Add(cabinetChart);
+            timeFilterComboBox = CreateTimeFilterComboBox();
+            cabinetPanel.Controls.Add(timeFilterComboBox);
+            cabinetTab.Controls.Add(cabinetPanel);
             tabControl.TabPages.Add(cabinetTab);
 
             Controls.Add(tabControl);
             Controls.Add(CreateFilterComboBox());
         }
+
+        private ComboBox CreateTimeFilterComboBox()
+        {
+            var combo = new ComboBox { Dock = DockStyle.Top };
+            combo.Items.AddRange(new[] { "За месяц", "За неделю" });
+            combo.SelectedIndex = 0;
+            combo.SelectedIndexChanged += (s, e) =>
+            {
+                currentTimeFilter = combo.SelectedIndex == 0 ? "month" : "week";
+                UpdateCabinetChart(GetCurrentStatusFilter());
+            };
+            return combo;
+        }
+
         private void ApplyFilter(string statusFilter)
         {
             UpdateStatusChart(statusFilter);
@@ -63,15 +83,33 @@ namespace TelegramBOT.Reports
 
         private void UpdateCabinetChart(string statusFilter)
         {
-            var cabinetStats = _database.GetTasksPerCabinet(statusFilter);
+            var cabinetStats = _database.GetTasksPercentagePerCabinet(statusFilter, currentTimeFilter);
             cabinetChart.Series["Задачи"].Points.Clear();
+
             foreach (var entry in cabinetStats)
             {
-                cabinetChart.Series["Задачи"].Points.AddXY(entry.Key, entry.Value);
+                DataPoint point = cabinetChart.Series["Задачи"].Points.Add(entry.Value);
+                point.AxisLabel = entry.Key;
+                point.Label = $"{entry.Value:0.0}%";
+                point.Color = Color.SteelBlue;
             }
+
+            cabinetChart.ChartAreas[0].AxisY.Maximum = 100;
+            cabinetChart.Invalidate();
         }
 
-        
+        private string GetCurrentStatusFilter()
+        {
+            // Найдите ваш основной ComboBox с фильтрами статусов
+            foreach (Control control in Controls)
+            {
+                if (control is ComboBox combo)
+                {
+                    return combo.SelectedItem?.ToString() ?? "Все";
+                }
+            }
+            return "Все";
+        }
 
         private Chart CreateCabinetChart()
         {
@@ -79,30 +117,28 @@ namespace TelegramBOT.Reports
             chart.Dock = DockStyle.Fill;
             chart.Size = new Size(600, 400);
 
-            // Настройка области диаграммы
             ChartArea chartArea = new ChartArea();
             chartArea.AxisX.Title = "Кабинеты";
-            chartArea.AxisY.Title = "Количество задач";
-            chartArea.AxisX.Interval = 1;
+            chartArea.AxisY.Title = "Доля задач (%)";
+            chartArea.AxisY.Maximum = 100;
             chart.ChartAreas.Add(chartArea);
 
-            // Настройка серии данных
             Series series = new Series("Задачи");
             series.ChartType = SeriesChartType.Column;
             series.IsValueShownAsLabel = true;
-            series.LabelFormat = "{#}"; // Отображать количество над столбцами
+            series.LabelFormat = "{0.0}%";
+            series.Font = new Font("Arial", 10, FontStyle.Bold);
 
-            // Загрузка данных
-            var cabinetStats = _database.GetTasksPerCabinet();
+            // Загрузка начальных данных
+            var cabinetStats = _database.GetTasksPercentagePerCabinet(period: "month");
             foreach (var entry in cabinetStats)
             {
-                series.Points.AddXY(entry.Key, entry.Value);
+                DataPoint point = series.Points.Add(entry.Value);
+                point.AxisLabel = entry.Key;
+                point.Label = $"{entry.Value:0.0}%";
+                point.Color = Color.SteelBlue;
             }
 
-            // Цвета для столбцов
-            series.Palette = ChartColorPalette.Pastel;
-
-            // Добавление легенды
             Legend legend = new Legend();
             legend.Docking = Docking.Bottom;
             chart.Legends.Add(legend);

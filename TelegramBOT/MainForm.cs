@@ -32,6 +32,12 @@ using System.IO;
         public MainForm()
         {
             InitializeComponent(); // Только ОДИН вызов!
+            this.Activated += (s, e) => this.Opacity = 1;
+            //this.Shown += (s, e) => Console.WriteLine("MainForm shown!");
+            //this.VisibleChanged += (s, e) => Console.WriteLine($"Visible: {this.Visible}");
+            //this.WindowState = FormWindowState.Normal;
+            // Подписка на событие нажатия клавиш в поле ввода
+            tbSendMessage.KeyDown += tbSendMessage_KeyDown;
 
             // Проверка пути БД
             string dbPath = Path.Combine(
@@ -70,6 +76,46 @@ using System.IO;
             }
         }
 
+        private void listViewMethod()
+        {
+            listViewUsers.DrawItem += (s, args) =>
+            {
+                // Выбираем цвета в зависимости от состояния
+                System.Drawing.Color backColor = args.Item.Selected
+                    ? SystemColors.Highlight
+                    : SystemColors.Window;
+
+                System.Drawing.Color foreColor = args.Item.Selected
+                    ? SystemColors.HighlightText
+                    : SystemColors.ControlText;
+
+                // Рисуем фон
+                using (var backBrush = new SolidBrush(backColor))
+                {
+                    args.Graphics.FillRectangle(backBrush, args.Bounds);
+                }
+
+                // Рисуем текст
+                TextRenderer.DrawText(
+                    args.Graphics,
+                    args.Item.Text,
+                    args.Item.Font,
+                    args.Bounds,
+                    foreColor,
+                    TextFormatFlags.Left | TextFormatFlags.VerticalCenter
+                );
+
+                // Рисуем фокус, если нужно
+                if (args.Item.Focused && args.Item.Selected)
+                {
+                    ControlPaint.DrawFocusRectangle(args.Graphics, args.Bounds);
+                }
+            };
+            // Настройка колонок
+            listViewUsers.Columns.Add("", listViewUsers.Width - 4);
+            listViewUsers.HeaderStyle = ColumnHeaderStyle.None;
+        }
+
         private void LoadUserAccounts()
         {
             try
@@ -105,24 +151,26 @@ using System.IO;
                 }
             }
 
-            private void DisplayUserMessages(string username)
+        private void DisplayUserMessages(string username)
+        {
+            if (textBoxMessages.InvokeRequired)
             {
-                // Добавляем проверку Invoke
-                if (textBoxMessages.InvokeRequired)
-                {
-                    textBoxMessages.Invoke(new Action<string>(DisplayUserMessages), username);
-                    return;
-                }
-
-                textBoxMessages.Clear();
-                var messages = _database.GetMessagesByUsername(username);
-                foreach (var message in messages)
-                {
-                    textBoxMessages.AppendText(message + Environment.NewLine);
-                }
+                textBoxMessages.Invoke(new Action<string>(DisplayUserMessages), username);
+                return;
             }
 
-            private async Task Update(ITelegramBotClient botClient, Update update, CancellationToken token)
+            textBoxMessages.Clear();
+            var messages = _database.GetMessagesByUsername(username);
+            foreach (var message in messages)
+            {
+                // Используем обновлённую структуру MessageData
+                string prefix = message.IsFromAdmin ? "[Вы] " : "[Пользователь] ";
+                string messageLine = $"{prefix}{message.Timestamp:g}: {message.Text}";
+                textBoxMessages.AppendText(messageLine + Environment.NewLine);
+            }
+        }
+
+        private async Task Update(ITelegramBotClient botClient, Update update, CancellationToken token)
             {
                 try
                 {
@@ -232,7 +280,8 @@ using System.IO;
 
                     args.DrawFocusRectangle();
                 };
-                listViewUsers.View = View.Details;
+            listViewMethod();
+            listViewUsers.View = View.Details;
                 // Добавление колонки
                 listViewUsers.Columns.Add("", listViewUsers.Width - 4);
 
@@ -273,15 +322,19 @@ using System.IO;
 
             private void buttonOpenTasks_Click(object sender, EventArgs e)
             {
-                foreach (Form form in Application.OpenForms)
-                {
-                    if (form is Tasks)
-                    {
-                        break;
-                    }
-                }
-                Tasks tasksForm = new Tasks(_database);
-                tasksForm.Show();
+            Tasks tasksForm = new Tasks(_database);
+
+                // Добавляем обработчик закрытия формы
+                tasksForm.FormClosed += (s, ev) =>
+            {
+                       this.WindowState = FormWindowState.Normal;
+                   this.Activate();
+                  this.Focus();
+                };
+
+                // Открываем как немодальное окно с явным указанием владельца
+                tasksForm.Show(this);
+                tasksForm.Location = new Point(this.Left + 50, this.Top + 50); // Смещение для видимости
             }
             
 
@@ -324,6 +377,79 @@ using System.IO;
         private void pbQrCode_MouseHover(object sender, EventArgs e)
         {
             toolTip1.SetToolTip(pbQrCode, "Отсканируйте QR-код С помощью вашего устройства");
+        }
+
+        private async void btnSendMessage_Click(object sender, EventArgs e)
+        {
+            if (string.IsNullOrEmpty(currentUsername))
+            {
+                MessageBox.Show("Выберите пользователя из списка!");
+                return;
+            }
+
+            string message = tbSendMessage.Text.Trim();
+            if (string.IsNullOrEmpty(message))
+            {
+                MessageBox.Show("Введите текст сообщения!");
+                return;
+            }
+
+            if (string.IsNullOrWhiteSpace(tbSendMessage.Text.Trim()))
+            {
+                tbSendMessage.Focus();
+                return; // Выходим без показа сообщения
+            }
+            btnSendMessage.Enabled = false;
+            try
+            {
+                long chatId = _database.GetChatIdByUsername(currentUsername);
+                if (chatId == 0)
+                {
+                    MessageBox.Show("Не удалось определить chat_id пользователя!");
+                    return;
+                }
+
+                // Отправка сообщения через бота
+                await botClient.SendTextMessageAsync(chatId, message);
+
+                // Сохранение сообщения в БД
+                await _database.AddOutgoingMessageAsync(currentUsername, chatId, message);
+
+                // Обновление интерфейса
+                tbSendMessage.Clear();
+                DisplayUserMessages(currentUsername);
+                tbSendMessage.Focus(); // Возвращаем фокус в поле ввода
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка отправки: {ex.Message}");
+            }
+            finally
+            {
+                btnSendMessage.Enabled = true;
+                tbSendMessage.Clear();
+                tbSendMessage.Focus();
+            }
+
+        }
+
+        private void tbSendMessage_KeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.KeyCode == Keys.Enter && !e.Shift && !e.Control)
+            {
+                e.SuppressKeyPress = true; // Блокируем системную обработку
+
+                // Проверяем наличие текста перед отправкой
+                if (!string.IsNullOrWhiteSpace(tbSendMessage.Text))
+                {
+                    btnSendMessage.PerformClick();
+                }
+                else
+                {
+                    // Очищаем поле и предотвращаем всплывающие сообщения
+                    tbSendMessage.Clear();
+                }
+            }
         }
     }
 }

@@ -73,10 +73,12 @@ namespace TelegramBOT
         // Инициализация базы данных (создание таблицы, если её нет)
         private void InitializeDatabase()
         {
-            using (var connection = new SQLiteConnection(_connectionString))
+            try
             {
-                connection.Open();
-                var command = new SQLiteCommand(@"
+                using (var connection = new SQLiteConnection(_connectionString))
+                {
+                    connection.Open();
+                    var command = new SQLiteCommand(@"
                 CREATE TABLE IF NOT EXISTS Users (
                     Username TEXT PRIMARY KEY,
                     FirstName TEXT,
@@ -90,6 +92,7 @@ namespace TelegramBOT
                     MessageText TEXT NOT NULL,
                     Timestamp DATETIME DEFAULT CURRENT_TIMESTAMP,
                     IsTask BOOLEAN DEFAULT 0,
+                    IsFromAdmin BOOLEAN DEFAULT 0,
                     Status TEXT DEFAULT 'None',
                     LastName TEXT,
                     CabinetNumber TEXT
@@ -122,10 +125,45 @@ namespace TelegramBOT
                     FOREIGN KEY(CabinetId) REFERENCES Cabinets(Id),
                     FOREIGN KEY(Username) REFERENCES Users(Username)
                 );", connection);
-                command.ExecuteNonQuery();
+                    command.ExecuteNonQuery();
+                    var migrateCmd = new SQLiteCommand(
+                        @"UPDATE Messages 
+                        SET IsFromAdmin = 0 
+                        WHERE IsFromAdmin IS NULL",
+                    connection);
+                    migrateCmd.ExecuteNonQuery();
+                    AddColumnIfNotExists(connection, "Messages", "IsFromAdmin", "BOOLEAN DEFAULT 0");
+                }
+            }
+            catch(Exception ex)
+            {
+                MessageBox.Show("Ошибка инициализации базы данных: "+ex.Message);
+
             }
         }
 
+        private void AddColumnIfNotExists(SQLiteConnection connection, string table, string column, string type)
+        {
+            try
+            {
+                var checkCmd = new SQLiteCommand(
+                    $"SELECT COUNT(*) FROM pragma_table_info('{table}') WHERE name='{column}'",
+                    connection);
+                var exists = Convert.ToInt32(checkCmd.ExecuteScalar()) > 0;
+
+                if (!exists)
+                {
+                    var alterCmd = new SQLiteCommand(
+                        $"ALTER TABLE {table} ADD COLUMN {column} {type}",
+                        connection);
+                    alterCmd.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show($"Ошибка добавления столбца: {ex.Message}");
+            }
+        }
 
         public async Task AddMessageAsync(string username, long chatId, string messageText)
         {
@@ -184,6 +222,7 @@ namespace TelegramBOT
             public string Username { get; set; }
             public string Text { get; set; }
             public DateTime Timestamp { get; set; }
+            public bool IsFromAdmin { get; set; } // Добавляем недостающее свойство
         }
 
         public List<string> GetUniqueUsernames()
@@ -206,25 +245,38 @@ namespace TelegramBOT
             return usernames;
         }
 
-        public List<string> GetMessagesByUsername(string username)
+        public List<MessageData> GetMessagesByUsername(string username)
         {
-            var messages = new List<string>();
-
+            var messages = new List<MessageData>();
             using (var connection = new SQLiteConnection(_connectionString))
             {
                 connection.Open();
-                var command = new SQLiteCommand("SELECT MessageText, Timestamp FROM Messages WHERE Username = @username", connection);
+                var command = new SQLiteCommand(
+                    @"SELECT 
+                MessageText, 
+                Timestamp, 
+                IsFromAdmin,
+                Username
+              FROM Messages 
+              WHERE Username = @username",
+                    connection);
+
                 command.Parameters.AddWithValue("@username", username);
+
                 using (var reader = command.ExecuteReader())
                 {
                     while (reader.Read())
                     {
-                        string message = $"{reader["Timestamp"]}: {reader["MessageText"]}"; // Форматирование сообщения
-                        messages.Add(message);
+                        messages.Add(new MessageData
+                        {
+                            Username = reader["Username"].ToString(),
+                            Text = reader["MessageText"].ToString(),
+                            Timestamp = DateTime.Parse(reader["Timestamp"].ToString()),
+                            IsFromAdmin = Convert.ToBoolean(reader["IsFromAdmin"])
+                        });
                     }
                 }
             }
-
             return messages;
         }
         public bool CheckCabinetExists(string cabinetNumber)
@@ -398,6 +450,7 @@ namespace TelegramBOT
 
         public void UpdateTaskStatus(int taskId, string status)
         {
+
             using (var connection = new SQLiteConnection(_connectionString))
             {
                 connection.Open();
@@ -913,6 +966,97 @@ namespace TelegramBOT
                     {
                         string cabinet = reader.IsDBNull(0) ? "Не указан" : reader.GetString(0);
                         stats.Add(cabinet, reader.GetInt32(1));
+                    }
+                }
+            }
+            return stats;
+        }
+
+        public long GetChatIdByUsername(string username)
+        {
+            using (var connection = new SQLiteConnection(_connectionString))
+            {
+                connection.Open();
+                var command = new SQLiteCommand(
+                    "SELECT ChatId FROM Messages WHERE Username = @username ORDER BY Timestamp DESC LIMIT 1",
+                    connection);
+                command.Parameters.AddWithValue("@username", username);
+                var result = command.ExecuteScalar();
+                return result != null ? Convert.ToInt64(result) : 0;
+            }
+        }
+
+        public async Task AddOutgoingMessageAsync(string username, long chatId, string messageText)
+        {
+            using (var connection = new SQLiteConnection(_connectionString))
+            {
+                await connection.OpenAsync();
+                var command = new SQLiteCommand(
+                    @"INSERT INTO Messages 
+                (Username, ChatId, MessageText, IsFromAdmin) 
+              VALUES 
+                (@username, @chatId, @messageText, 1)", connection);
+
+                command.Parameters.AddWithValue("@username", username);
+                command.Parameters.AddWithValue("@chatId", chatId);
+                command.Parameters.AddWithValue("@messageText", messageText);
+
+                await command.ExecuteNonQueryAsync();
+            }
+            MessageAdded?.Invoke();
+        }
+        public Dictionary<string, double> GetTasksPercentagePerCabinet(string statusFilter = null, string period = "month")
+        {
+            var stats = new Dictionary<string, double>();
+            using (var conn = new SQLiteConnection(_connectionString))
+            {
+                conn.Open();
+                var query = @"
+            WITH TotalTasks AS (
+                SELECT COUNT(*) as Total 
+                FROM Messages 
+                WHERE IsTask = 1 
+                    AND (@statusFilter IS NULL 
+                         OR @statusFilter = 'Все' 
+                         OR Status = @statusFilter)
+                    AND Timestamp >= CASE 
+                        WHEN @period = 'month' THEN date('now', 'start of month')
+                        WHEN @period = 'week' THEN date('now', '-7 days')
+                        ELSE '0000-00-00'
+                    END
+            )
+            SELECT 
+                COALESCE(CabinetNumber, 'Не указан'), 
+                CASE WHEN (SELECT Total FROM TotalTasks) > 0 
+                     THEN (COUNT(*) * 100.0 / (SELECT Total FROM TotalTasks)) 
+                     ELSE 0 
+                END
+            FROM Messages 
+            WHERE IsTask = 1 
+                AND (@statusFilter IS NULL 
+                     OR @statusFilter = 'Все' 
+                     OR Status = @statusFilter)
+                AND Timestamp >= CASE 
+                    WHEN @period = 'month' THEN date('now', 'start of month')
+                    WHEN @period = 'week' THEN date('now', '-7 days')
+                    ELSE '0000-00-00'
+                END
+            GROUP BY CabinetNumber";
+
+                var cmd = new SQLiteCommand(query, conn);
+                cmd.Parameters.AddWithValue("@statusFilter",
+                    string.IsNullOrEmpty(statusFilter) || statusFilter == "Все"
+                        ? DBNull.Value
+                        : (object)statusFilter);
+                cmd.Parameters.AddWithValue("@period", period);
+
+                using (var reader = cmd.ExecuteReader())
+                {
+                    while (reader.Read())
+                    {
+                        string cabinet = reader.GetString(0);
+                        double percentage = Math.Round(reader.GetDouble(1), 1);
+                        stats.Add(cabinet, percentage);
                     }
                 }
             }
